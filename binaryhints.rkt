@@ -181,6 +181,12 @@
     (let ([split-filter (lambda (s) (filter not-empty-string? (string-split s "")))])
       (let ([final-terms (foldl (lambda (s l) (map string-append l (split-filter s))) initl wl)])
           (pred (map string->number final-terms))))))
+          
+ (define (translate-binary-word initl wl)
+    (let ([not-empty-string? (lambda (s) (> (string-length s) 0)) ])
+    (let ([split-filter (lambda (s) (filter not-empty-string? (string-split s "")))])
+      (let ([final-terms (foldl (lambda (s l) (map string-append l (split-filter s))) initl wl)])
+          (map string->number final-terms)))))
 
 (define (add-pred l) (eq? (+ (car l) (cadr l)) (caddr l)))
 (define (times3-pred l) (eq? (* (car l) 3) (cadr l)))
@@ -210,3 +216,4 @@
   (define w (word* k '("00" "01" "10" "11")))
   (evaluate w (solve (assert (not (same-outcome? m1 m2 w))))))
 (define add-ce (solve-automaton-ce S134 T134 4))
+printf("Compare ~a.\n\n" (translate-binary-word (list "#b" "#b") add-ce))
