@@ -161,17 +161,19 @@
 (define b3 (list "#b" "#b" "#b"))
 (define b2 (list "#b" "#b"))
 
-(define (test-binary-wordlist initl wl pred)
+(define (test-binary-wordlist wl pred)
+  (let ([initl (build-list (string-length (car wl)) (lambda (x) "#b"))])
   (let ([not-empty-string? (lambda (s) (> (string-length s) 0)) ])
     (let ([split-filter (lambda (s) (filter not-empty-string? (string-split s "")))])
       (let ([final-terms (foldl (lambda (s l) (map string-append l (split-filter s))) initl wl)])
-          (pred (map string->number final-terms))))))
+          (pred (map string->number final-terms)))))))
 
-(define (translate-binary-word initl wl)
+(define (translate-binary-word wl)
+  (let ([initl (build-list (string-length (car wl)) (lambda (x) "#b"))])
     (let ([not-empty-string? (lambda (s) (> (string-length s) 0)) ])
     (let ([split-filter (lambda (s) (filter not-empty-string? (string-split s "")))])
       (let ([final-terms (foldl (lambda (s l) (map string-append l (split-filter s))) initl wl)])
-          (map string->number final-terms)))))
+          (map string->number final-terms))))))
 
 (define (add-pred l) (eq? (+ (car l) (cadr l)) (caddr l)))
 (define (times3-pred l) (eq? (* (car l) 3) (cadr l)))
@@ -180,15 +182,15 @@
 ;;; check that true solutions are correct up to Sigma^k
 (define (check-sigma3-add M k)
   (define w (word* k sigma3))
-  (evaluate w (solve (assert (not (eq? (M w) (test-binary-wordlist (list "#b" "#b" "#b") w add-pred)))))))
+  (evaluate w (solve (assert (not (eq? (M w) (test-binary-wordlist w add-pred)))))))
 
 (define (check-sigma2-mult3 M k)
   (define w (word* k sigma2))
-  (evaluate w (solve (assert (not (eq? M w) (test-binary-wordlist (list "#b" "#b") w times3-pred))))))
+  (evaluate w (solve (assert (not (eq? M w) (test-binary-wordlist w times3-pred))))))
 
 (define (check-sigma2-greater M k)
   (define w (word* k sigma2))
-  (evaluate w (solve (assert (not (eq? M w) (test-binary-wordlist (list "#b" "#b") w greater-pred))))))
+  (evaluate w (solve (assert (not (eq? M w) (test-binary-wordlist w greater-pred))))))
 
 ;;;; counterexample on 2-col greater than ;;;;
 (define (same-outcome? m1 m2 w)
@@ -200,5 +202,5 @@
 
 (define add-ce (solve-automaton-ce S134 T134 4))
 
-(define translatedterm (translate-binary-word (list "#b" "#b") add-ce))
+(define translatedterm (translate-binary-word add-ce))
 (printf "Consider the terms ~a and ~a.\n\n" (car translatedterm) (car (cdr translatedterm)))
