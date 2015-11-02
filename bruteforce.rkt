@@ -1,36 +1,6 @@
 #lang racket
 
-; adapted from Automata via Macros (Krishnamurthi)
-; and Emina's automaton in Rosette
-(define-syntax process-state
-  (syntax-rules (accept →)
-    [(_ accept (label → target) ...)
-     (lambda (stream)
-       (cond
-         [(empty? stream) true]
-         [else
-          (case (first stream)
-            [(label) (target (rest stream))] ...
-            [else false])]))]
-    [(_(label → target) ...)
-     (lambda (stream)
-       (cond
-         [(empty? stream) false]
-         [else
-          (case (first stream)
-            [(label) (target (rest stream))]
-            ...
-            [else false])]))]
-     ))
-
-(define-syntax automaton
-  (syntax-rules (:)
-    [(_ init-state
-        (state : response ...)
-        ...)
-     (letrec ([state (process-state response ...)]
-              ...)
-              init-state)]))
+(require "automata.rkt")
 
 (define (extend-word-by-one alphabet prevlist)
   (let ([lists (for/list ([i alphabet])
@@ -44,6 +14,15 @@
                           (stream-cons (car newlist) (f newlist (cdr newlist) alphabet)))
                     (stream-cons (car workinglist) (f currentlist (cdr workinglist) alphabet))))])
     (stream-cons '() (f (list null) null alphabet))))
+
+(define (bounded-words alphabet k)
+  (letrec ([f (lambda (currentlist workinglist alphabet i k)
+                (cond [(eq? i k) empty-stream]
+                      [(empty? workinglist)
+                       (let ([newlist (extend-word-by-one alphabet currentlist)])
+                         (stream-cons (car newlist) (f newlist (cdr newlist) alphabet (+ i 1) k)))]
+                      [else (stream-cons (car workinglist) (f currentlist (cdr workinglist) alphabet (+ i 1) k))]))])
+    (stream-cons '() (f (list null) null alphabet 0 k))))
 
 ;;;; counterexample ;;;;;
 
@@ -114,15 +93,37 @@
 (define (find-failing-prefix M1 M2 alphabet k)
   (let ([s (allwords alphabet)])
     (letrec ([f (lambda (M1 M2 i j k)
-                  (cond [(not (same-outcome? M1 M2 (append (stream-ref s i) (stream-ref s j))))
+                  (let ([word-i (stream-ref s i)]
+                        [word-j (stream-ref s j)])
+                  (cond [(not (same-outcome? M1 M2 (append word-i word-j)))
                          (f M1 M2 i (+ j 1) k)] ;; p works with this suffix, keep checking suffixes
                         [(eq? i k) "no such prefix"] ;; finished searching
-                        [(eq? j k) (stream-ref s i)] ;; found a prefix
-                        [else (f M1 M2 (+ i 1) 0 k)]))]) ;; this prefix didn't work, check next prefix
+                        [(eq? j k) word-i] ;; found a prefix
+                        [else (f M1 M2 (+ i 1) 0 k)])))]) ;; this prefix didn't work, check next prefix
       (f M1 M2 0 0 k))))
-                                   
 
+(define (find-failing-prefix2 M1 M2 alphabet k)
+  (let ([s1 (allwords alphabet)]
+        [s2 (allwords alphabet)])
+    (letrec ([f (lambda (M1 M2 i stream-i j stream-j k)
+                  (let ([word-i (stream-first stream-i)]
+                        [word-j (stream-first stream-j)])
+                    (cond [(not (same-outcome? M1 M2 (append word-i word-j))) (f M1 M2 i stream-i (+ j 1) (stream-rest stream-j) k)]
+                          [(eq? i k) "no such prefix"]
+                          [(eq? j k) word-i]
+                          [else (f M1 M2 (+ i 1) (stream-rest stream-i) 0 s2 k)])))])
+      (f M1 M2 0 s1 0 s2 k))))
 
+(define (find-failing-prefix3 M1 M2 alphabet k)
+  (let ([s (stream-filter (lambda (p) (stream-andmap
+                                            (lambda (w) (not (same-outcome? M1 M2 (append p w)))) (bounded-words alphabet k)))
+                               (bounded-words alphabet k))])
+    (if (stream-empty? s) "no such prefix" (stream-first s))))
+
+(define allwords3 (list '() '(1) '(0) '(0 0) '(0 1) '(1 0) '(1 1) '(0 0 0) '(0 0 1) '(0 1 0) '(0 1 1) '(1 0 0) '(1 0 1) '(1 1 0) '(1 1 1)))
+
+;; fast prefix solution
+(filter (lambda (p) (andmap (lambda (w) (not (same-outcome? S2 T2 (append p w)))) allwords3)) allwords3)
 
 (printf "Prefix hint:\n")
 ;(printf "The prefix ~a st. p followed by any word up to length k will not have the desired behavior.\n\n" (find-failing-prefix S2 T2 binalpha 15)
@@ -130,28 +131,6 @@
 ;;;;;;; split state hint ;;;;;;;
 ;; split states
 ; some state s in S where strings that arrive in s are both accepted and rejected by T
-
-(define-syntax process-state2
-  (syntax-rules (→)
-    [(_ name  (label → target) ...)
-     (lambda (stream)
-       (cond
-         [(empty? stream) name]
-         [else
-          (case (first stream)
-            [(label) (target (rest stream))] ...
-            [else false])]))]
-     ))
-
-(define-syntax automaton2
-  (syntax-rules (:)
-    [(_ init-state
-        (state : response ...)
-        ...)
-     (letrec ([state (process-state2 response ...)]
-              ...)
-              init-state)]))
-
 
 (define S3
   (automaton2 s0
