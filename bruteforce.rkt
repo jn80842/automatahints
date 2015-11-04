@@ -2,6 +2,8 @@
 
 (require "automata.rkt")
 
+(provide allwords bounded-words find-counterexample find-failing-prefix find-split-state)
+
 (define (extend-word-by-one alphabet prevlist)
   (let ([lists (for/list ([i alphabet])
     (map (lambda (l) (append (list i) l)) prevlist))])
@@ -17,12 +19,17 @@
 
 (define (bounded-words alphabet k)
   (letrec ([f (lambda (currentlist workinglist alphabet i k)
-                (cond [(eq? i k) empty-stream]
-                      [(empty? workinglist)
+                (cond [(> i k) empty-stream]
+                      [(and (empty? workinglist) (< i k))
                        (let ([newlist (extend-word-by-one alphabet currentlist)])
                          (stream-cons (car newlist) (f newlist (cdr newlist) alphabet (+ i 1) k)))]
-                      [else (stream-cons (car workinglist) (f currentlist (cdr workinglist) alphabet (+ i 1) k))]))])
+                      [(empty? workinglist) empty-stream]
+                      [else (stream-cons (car workinglist) (f currentlist (cdr workinglist) alphabet i k))]))])
     (stream-cons '() (f (list null) null alphabet 0 k))))
+
+(define (print-stream s k)
+  (for/list ([i k])
+    (printf "~a\n" (stream-ref s i))))
 
 ;;;; counterexample ;;;;;
 
@@ -56,12 +63,8 @@
   (eq? (m1 w) (m2 w)))
 
 (define (find-counterexample M1 M2 alphabet k)
-  (let ([s (allwords alphabet)])
-    (letrec ([f (lambda (M1 M2 i k)
-                  (cond [(not (same-outcome? M1 M2 (stream-ref s i))) (stream-ref s i)]
-                        [(eq? i k) "no counterexample"]
-                        [else (f M1 M2 (+ i 1) k)]))])
-      (f M1 M2 0 k))))
+  (let ([s (stream-filter (lambda (w) (not (same-outcome? M1 M2 w))) (bounded-words alphabet k))])
+    (if (stream-empty? s) "no counterexample" (stream-first s))))
 
 (printf "Counterexample hint:\n")
 (printf "The word ~a is a counterexample.\n\n" (find-counterexample S T (list 0 1) 20))
@@ -91,30 +94,6 @@
                  (1 → s2)]))
 
 (define (find-failing-prefix M1 M2 alphabet k)
-  (let ([s (allwords alphabet)])
-    (letrec ([f (lambda (M1 M2 i j k)
-                  (let ([word-i (stream-ref s i)]
-                        [word-j (stream-ref s j)])
-                  (cond [(not (same-outcome? M1 M2 (append word-i word-j)))
-                         (f M1 M2 i (+ j 1) k)] ;; p works with this suffix, keep checking suffixes
-                        [(eq? i k) "no such prefix"] ;; finished searching
-                        [(eq? j k) word-i] ;; found a prefix
-                        [else (f M1 M2 (+ i 1) 0 k)])))]) ;; this prefix didn't work, check next prefix
-      (f M1 M2 0 0 k))))
-
-(define (find-failing-prefix2 M1 M2 alphabet k)
-  (let ([s1 (allwords alphabet)]
-        [s2 (allwords alphabet)])
-    (letrec ([f (lambda (M1 M2 i stream-i j stream-j k)
-                  (let ([word-i (stream-first stream-i)]
-                        [word-j (stream-first stream-j)])
-                    (cond [(not (same-outcome? M1 M2 (append word-i word-j))) (f M1 M2 i stream-i (+ j 1) (stream-rest stream-j) k)]
-                          [(eq? i k) "no such prefix"]
-                          [(eq? j k) word-i]
-                          [else (f M1 M2 (+ i 1) (stream-rest stream-i) 0 s2 k)])))])
-      (f M1 M2 0 s1 0 s2 k))))
-
-(define (find-failing-prefix3 M1 M2 alphabet k)
   (let ([s (stream-filter (lambda (p) (stream-andmap
                                             (lambda (w) (not (same-outcome? M1 M2 (append p w)))) (bounded-words alphabet k)))
                                (bounded-words alphabet k))])
@@ -126,8 +105,8 @@
 (filter (lambda (p) (andmap (lambda (w) (not (same-outcome? S2 T2 (append p w)))) allwords3)) allwords3)
 
 (printf "Prefix hint:\n")
-;(printf "The prefix ~a st. p followed by any word up to length k will not have the desired behavior.\n\n" (find-failing-prefix S2 T2 binalpha 15)
-(printf "Line above would find solution, but ran for >5min.\n\n")
+(printf "The prefix ~a st. p followed by any word up to length k will not have the desired behavior.\n\n" (find-failing-prefix S2 T2 binalpha 3))
+
 ;;;;;;; split state hint ;;;;;;;
 ;; split states
 ; some state s in S where strings that arrive in s are both accepted and rejected by T
@@ -157,7 +136,7 @@
   (not (eq? (M w) (M wprime))))
 
 
-(define (find-same-state-pair M1 M2 alphabet k)
+(define (find-split-state M1 M2 alphabet k)
   (let ([s (allwords alphabet)])
     (letrec ([f (lambda (M1 M2 i j k)
                   (cond [(and (same-final-state M1 (stream-ref s i) (stream-ref s j))
@@ -167,7 +146,7 @@
                         [else (f M1 M2 i (+ j 1) k)]))])
       (f M1 M2 0 0 k))))
 
-(define split-state-hint (find-same-state-pair S3 T3 binalpha 10))
+(define split-state-hint (find-split-state S3 T3 binalpha 10))
 (printf "\nSplit state hint:")
 (printf "\nWords that arrive in the state ~a have different behaviors on the true solution.\n\n" (car split-state-hint))
                                                                                 
