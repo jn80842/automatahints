@@ -7,6 +7,8 @@
 (require "automata.rkt")
 (require "rosettehintmethods.rkt")
 
+(provide same-outcome? solve-automaton-ce solve-split-state)
+
 (define S
   (automaton s0
              [s0 : (0 → s1)

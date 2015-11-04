@@ -1,6 +1,7 @@
 #lang racket
 
 (require "automata.rkt")
+
 (require "bruteforcemethods.rkt")
 
 ;;;; counterexample ;;;;;
@@ -30,10 +31,6 @@
 (define sigma2 (list (list 0 0) (list 0 1) (list 1 0) (list 1 1)))
 (define binalpha (list 0 1))
 
-
-
-
-
 (printf "Counterexample hint:\n")
 (printf "The word ~a is a counterexample.\n\n" (find-counterexample S T (list 0 1) 20))
 
@@ -61,7 +58,6 @@
              [s2 : accept (0 → s2)
                  (1 → s2)]))
 
-
 (printf "Prefix hint:\n")
 (printf "The prefix ~a st. p followed by any word up to length k will not have the desired behavior.\n\n" (find-failing-prefix S2 T2 binalpha 3))
 
@@ -87,8 +83,6 @@
                  (1 → s2)]
              [s2 : (0 → s2)
                  (1 → s2)]))
-
-
 
 (define split-state-hint (find-split-state S3 T3 binalpha 10))
 (printf "\nSplit state hint:")
