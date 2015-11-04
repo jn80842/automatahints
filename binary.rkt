@@ -94,7 +94,7 @@
                   ("111" → q2)]))
 
 ;; Sipser 1.33 bottom row equals top row x 3, reversed
-(define T133
+(define T133R
   (automaton q0
              [q0 : accept ("00" → q0)
                  ("01" → sink)
@@ -103,7 +103,7 @@
              [q1 : ("00" → sink)
                  ("01" → q2)
                  ("10" → q3)
-                 ("11" → q1)]
+                 ("11" → sink)]
              [q2 : accept ("00" → q2)
                  ("01" → sink)
                  ("10" → sink)
@@ -120,6 +120,53 @@
                    ("01" → sink)
                    ("10" → sink)
                    ("11" → sink)]))
+
+(define T133
+  (automaton q0
+             [q0 : accept ("00" → q0)
+                 ("01" → q1)
+                 ("10" → sink)
+                 ("11" → sink)]
+             [q1 : ("00" → q2)
+                 ("01" → sink)
+                 ("10" → sink)
+                 ("11" → q0)]
+             [q2 : ("00" → sink)
+                 ("01" → sink)
+                 ("10" → q1)
+                 ("11" → q2)]
+             [sink : ("00" → sink)
+                   ("01" → sink)
+                   ("10" → sink)
+                   ("11" → sink)]))
+
+(define S133
+  (automaton q0
+             [q0 : accept ("00" → q0)
+                 ("01" → q1)
+                 ("10" → sink)
+                 ("11" → sink)]
+             [q1 : ("00" → q3)
+                 ("01" → sink)
+                 ("10" → sink)
+                 ("11" → q2)]
+             [q2 : accept ("00" → q2)
+                 ("01" → q1)
+                 ("10" → sink)
+                 ("11" → sink)]
+             [q3 : ("00" → sink)
+                 ("01" → sink)
+                 ("10" → q4)
+                 ("11" → sink)]
+             [q4 : ("00" → sink)
+                 ("01" → q3)
+                 ("10" → sink)
+                 ("11" → q2)]
+             [sink : ("00" → sink)
+                   ("01" → sink)
+                   ("10" → sink)
+                   ("11" → sink)]))
+
 ;; Sipser 1.34 Top row is larger than bottom row
 
 (define T134
@@ -176,8 +223,8 @@
           (map string->number final-terms))))))
 
 (define (add-pred l) (eq? (+ (car l) (cadr l)) (caddr l)))
-(define (times3-pred l) (eq? (* (car l) 3) (cadr l)))
-(define (greater-pred l) (> (car l) (cadr)))
+(define (mult3-pred l) (eq? (* (car l) 3) (cadr l)))
+(define (greater-pred l) (> (car l) (cadr l)))
 
 ;;; check that true solutions are correct up to Sigma^k
 (define (check-sigma3-add M k)
@@ -186,7 +233,7 @@
 
 (define (check-sigma2-mult3 M k)
   (define w (word* k sigma2))
-  (evaluate w (solve (assert (not (eq? M w) (test-binary-wordlist w times3-pred))))))
+  (evaluate w (solve (assert (not (eq? M w) (test-binary-wordlist w mult3-pred))))))
 
 (define (check-sigma2-greater M k)
   (define w (word* k sigma2))
@@ -200,7 +247,27 @@
   (define w (word* k '("00" "01" "10" "11")))
   (evaluate w (solve (assert (not (same-outcome? m1 m2 w))))))
 
-(define add-ce (solve-automaton-ce S134 T134 4))
+(define greater-ce (solve-automaton-ce S134 T134 4))
 
-(define translatedterm (translate-binary-word add-ce))
+(define translatedterm (translate-binary-word greater-ce))
 (printf "Consider the terms ~a and ~a.\n\n" (car translatedterm) (car (cdr translatedterm)))
+
+;;;;; counterexample comparing student sol to predicate ;;;;
+(define (solve-automaton-ce-pred m1 k pred)
+  (define w (word* k '("00" "01" "10" "11")))
+  (evaluate w (solve (assert (not (eq? (m1 w) (test-binary-wordlist w greater-pred)))))))
+;;;; above finds no solution, why? ;;;;;;;
+
+;(define greater-ce-pred (solve-automaton-ce-pred S134 4 greater-pred))
+
+(define (solve-automaton-ce-mult3 m1 m2 k)
+  (define w (word k (list "00" "01" "10" "11")))
+  (evaluate w (solve (assert (not (same-outcome? m1 m2 w))))))
+
+(define (solve-automaton-ce-mult3-pred m k)
+  (define w (word* k (list "00" "01" "10" "11")))
+  (evaluate w (solve (assert (not (eq? (m w) (test-binary-wordlist w mult3-pred)))))))
+
+;;; note: synthesis not working here b/c lists of strings are not lifted to symbolic values
+;;; fix!!
+
