@@ -5,6 +5,7 @@
  rosette/lib/meta/meta)
 
 (require "automata.rkt")
+(require "rosettehintmethods.rkt")
 
 (define S
   (automaton s0
@@ -28,16 +29,12 @@
              [s3 : (0 → s3)
                  (1 → s3)]))
 
-;; helper function: w is accepted on m1 and rejected on m2 or vice versa.
-(define (same-outcome? m1 m2 w)
-  (eq? (m1 w) (m2 w)))
+
 
 (printf "Counterexample hint:\n")
-(define (solve-automaton-ce m1 m2 k)
-  (define w (word* k '(0 1)))
-  (evaluate w (solve (assert (not (same-outcome? m1 m2 w))))))
 
-(printf "The word ~a is a counterexample.\n\n" (solve-automaton-ce S T 3))
+
+(printf "The word ~a is a counterexample.\n\n" (solve-automaton-ce S T (list 0 1) 3))
 
 ; for some prefix p, for all words w of length less than k, p.w will have a different outcome on m1 and m2
 ; we want to synthesize p
@@ -101,10 +98,5 @@
                  (1 → s2)]))
 
 (printf "\nSplit state hint:\n")
-(define (solve-split-state m1 m2 k)
-  (define w (word* k '(0 1)))
-  (define wprime (word* k '(0 1)))
-  (m1 (evaluate w (solve (begin (assert (eq? (m1 w) (m1 wprime)))
-                (assert (not (eq? (m2 w) (m2 wprime)))))))))
 
-(printf "\nWords that arrive in the state ~a have different behaviors on the true solution.\n\n" (solve-split-state S3 T 3))
+(printf "\nWords that arrive in the state ~a have different behaviors on the true solution.\n\n" (solve-split-state S3 T3 (list 0 1) 3))
