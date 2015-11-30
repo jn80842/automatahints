@@ -1,52 +1,20 @@
-#lang s-exp rosette
+#lang s-exp rosette/safe
 
 (require 
  rosette/query/debug rosette/lib/tools/render 
- rosette/lib/meta/meta)
+ rosette/lib/meta/meta rosette/lib/reflect/lift)
 
-; adapted from Automata via Macros (Krishnamurthi)
-; and Emina's automaton in Rosette
-(define-syntax process-state
-  (syntax-rules (accept →)
-    [(_ accept (label → target) ...)
-     (lambda (stream)
-       (cond
-         [(empty? stream) true]
-         [else
-          (case (first stream)
-            [(label) (target (rest stream))] ...
-            [else false])]))]
-    [(_(label → target) ...)
-     (lambda (stream)
-       (cond
-         [(empty? stream) false]
-         [else
-          (case (first stream)
-            [(label) (target (rest stream))]
-            ...
-            [else false])]))]
-     ))
+(require (only-in racket [string->number racket/string->number]
+                  [string-length racket/string-length]
+                  [string-split racket/string-split]
+                  string?))
 
-(define-syntax automaton
-  (syntax-rules (:)
-    [(_ init-state
-        (state : response ...)
-        ...)
-     (letrec ([state (process-state response ...)]
-              ...)
-              init-state)]))
+(require "automata.rkt")
+(require "rosettehintmethods.rkt")
 
-;; from https://github.com/emina/rosette/blob/master/sdsl/fsm/query.rkt
-; Returns a symbolic word of length k, drawn from the given alphabet.
-(define (word k alphabet)
-  (for/list ([i k])
-    (define-symbolic* idx number?)
-    (list-ref alphabet idx)))
-
-; Returns a symbolic word of length up to k, drawn from the given alphabet.
-(define (word* k alphabet)
-  (define-symbolic* n number?)
-  (take (word k alphabet) n))
+(define-lift string->number [(string?) racket/string->number])
+(define-lift string-length [(string?) racket/string-length])
+(define-lift string-split [(string? string?) racket/string-split])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Sipser Binary Problems ;;
@@ -173,47 +141,40 @@
 (define s3 (list "001" "111" "110"))
 (define s3_2 (list "001" "100" "000"))
 
-(define b3 (list "#b" "#b" "#b"))
-(define b2 (list "#b" "#b"))
+;;; alternative method of interpreting strings as binary numbers
+;;; commented out as they contain unlifted string methods
 
-(define (test-binary-wordlist initl wl pred)
-  (let ([not-empty-string? (lambda (s) (> (string-length s) 0)) ])
-    (let ([split-filter (lambda (s) (filter not-empty-string? (string-split s "")))])
-      (let ([final-terms (foldl (lambda (s l) (map string-append l (split-filter s))) initl wl)])
-          (pred (map string->number final-terms))))))
+;(define (test-binary-wordlist initl wl pred)
+;  (let ([not-empty-string? (lambda (s) (> (string-length s) 0)) ])
+;    (let ([split-filter (lambda (s) (filter not-empty-string? (string-split s "")))])
+;      (let ([final-terms (foldl (lambda (s l) (map string-append l (split-filter s))) initl wl)])
+;          (pred (map string->number final-terms))))))
           
- (define (translate-binary-word initl wl)
-    (let ([not-empty-string? (lambda (s) (> (string-length s) 0)) ])
-    (let ([split-filter (lambda (s) (filter not-empty-string? (string-split s "")))])
-      (let ([final-terms (foldl (lambda (s l) (map string-append l (split-filter s))) initl wl)])
-          (map string->number final-terms)))))
+; (define (translate-binary-word initl wl)
+;    (let ([not-empty-string? (lambda (s) (> (string-length s) 0)) ])
+;    (let ([split-filter (lambda (s) (filter not-empty-string? (string-split s "")))])
+;      (let ([final-terms (foldl (lambda (s l) (map string-append l (split-filter s))) initl wl)])
+;          (map string->number final-terms)))))
+
+(define (sigma-n->decimal str lst)
+  (let ([twolst (map (lambda (x) (* 2 x)) lst)]
+        [newlst (map string->number (filter (lambda (s) (> (string-length s) 0)) (string-split str "")))])
+    (map (lambda (one two) (+ one two)) twolst newlst)))
 
 (define (add-pred l) (eq? (+ (car l) (cadr l)) (caddr l)))
 (define (times3-pred l) (eq? (* (car l) 3) (cadr l)))
-(define (greater-pred l) (> (car l) (cadr)))
-
-;;; check that true solutions are correct up to Sigma^k
-(define (check-sigma3-add M k)
-  (define w (word* k sigma3))
-  (evaluate w (solve (assert (not (eq? (M w) (test-binary-wordlist (list "#b" "#b" "#b") w add-pred)))))))
-(define (check-sigma3-add-complete M k)
-  (define w (word* k sigma3))
-  (evaluate w (solve (assert (eq? (M w) (test-binary-wordlist (list "#b" "#b" "#b")))))))
-
-(define (check-sigma2-mult3 M k)
-  (define w (word* k sigma2))
-  (evaluate w (solve (assert (not (eq? M w) (test-binary-wordlist (list "#b" "#b") w times3-pred))))))
-
-(define (check-sigma2-greater M k)
-  (define w (word* k sigma2))
-  (evaluate w (solve (assert (not (eq? M w) (test-binary-wordlist (list "#b" "#b") w greater-pred))))))
+(define (greater-eq-pred l) (>= (car l) (cadr l)))
 
 ;;;; counterexample on 2-col greater than ;;;;
-(define (same-outcome? m1 m2 w)
-  (eq? (m1 w) (m2 w)))
+
 (printf "Counterexample hint:\n")
-(define (solve-automaton-ce m1 m2 k)
-  (define w (word* k '("00" "01" "10" "11")))
-  (evaluate w (solve (assert (not (same-outcome? m1 m2 w))))))
-(define add-ce (solve-automaton-ce S134 T134 4))
-printf("Compare ~a.\n\n" (translate-binary-word (list "#b" "#b") add-ce))
+(define greater-ce (solve-automaton-ce S134 T134 sigma2 4))
+(printf "The word ~a is a counterexample for automaton S134.\n\n" (evaluate greater-ce))
+
+(define (solve-check-pred m1 alphabet k predicate)
+  (define w (word* k alphabet))
+  (evaluate w (solve (assert (not (eq? (m1 w) (predicate (foldl sigma-n->decimal (list 0 0) w))))))))
+
+(printf "Counterexample hint through predicate:\n")
+(define greater-pred-ce (solve-check-pred S134 sigma2 3 greater-eq-pred))
+(printf "The word ~a is a counterexample for automaton S134.\n\n" (evaluate greater-pred-ce))
