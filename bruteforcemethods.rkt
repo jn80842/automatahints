@@ -1,13 +1,16 @@
 #lang racket
 
+(require racket/generator)
 (require "automata.rkt")
 
-(provide allwords bounded-words print-stream find-counterexample find-failing-prefix find-split-state)
+(provide allwords bounded-words print-stream find-counterexample find-failing-prefix find-split-state find-counterexample-gen)
+(define sigma2 (list "00" "01" "10" "11"))
+(define firstlist (list (list "00") (list "01" ) (list "10") (list "11")))
 
 (define (extend-word-by-one alphabet prevlist)
   (let ([lists (for/list ([i alphabet])
-    (map (lambda (l) (append (list i) l)) prevlist))])
-    (foldl append '() lists)))
+    (map (lambda (l) (cons i l)) prevlist))])
+    (append* lists)))
 
 (define (allwords alphabet)
   (letrec ([f (lambda (currentlist workinglist alphabet)
@@ -27,6 +30,18 @@
                       [else (stream-cons (car workinglist) (f currentlist (cdr workinglist) alphabet i k))]))])
     (stream-cons '() (f (list null) null alphabet 0 k))))
 
+(define (wordgenerator alphabet)
+  (generator ()
+             (begin
+               (yield '())
+               (let loop ([workinglst (map (lambda (x) (list x)) alphabet)]
+                          [originallst (map (lambda (x) (list x)) alphabet)])
+                 (if (empty? workinglst)
+                     (loop (extend-word-by-one alphabet originallst) (extend-word-by-one alphabet originallst))
+                     (begin
+                       (yield (car workinglst))
+                       (loop (cdr workinglst) originallst)))))))
+
 (define (print-stream s k)
   (for/list ([i k])
     (printf "~a\n" (stream-ref s i))))
@@ -35,8 +50,23 @@
   (not (eq? (M1 w) (M2 w))))
 
 (define (find-counterexample M1 M2 alphabet k)
-  (let ([s (stream-filter (lambda (w) (not (eq? (M1 w) (M2 w)))) (bounded-words alphabet k))])
-    (if (stream-empty? s) "no counterexample" (stream-first s))))
+  (let ([limit (words-up-to-k (length alphabet) k)])
+  (let ([s (stream-filter (lambda (w) (not (eq? (M1 w) (M2 w)))) (bounded-words alphabet limit))])
+    (if (stream-empty? s) "no counterexample" (stream-first s)))))
+
+(define (words-up-to-k alphabet-length k)
+  (for/sum ([i (in-range (+ k 1))]) (expt alphabet-length i)))
+
+(define (find-counterexample-gen M1 M2 alphabet k)
+  (let ([limit (words-up-to-k (length alphabet) k)]
+        [gen (wordgenerator alphabet)])
+    (letrec ([f (lambda (i)
+                  (let ([w (gen)])
+                    (cond [(eq? i limit) "no counterexample"]
+                          [(not (same-outcome? M1 M2 w)) w]
+                          [else (f (add1 i))])))])
+      (f 1))))
+
 
 (define (find-failing-prefix M1 M2 alphabet k)
   (let ([s (stream-filter (lambda (p) (stream-andmap

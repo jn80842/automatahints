@@ -32,7 +32,8 @@
 (define binalpha (list 0 1))
 
 (printf "Counterexample hint:\n")
-(printf "The word ~a is a counterexample.\n\n" (find-counterexample S T (list 0 1) 20))
+(printf "The word ~a is a counterexample.\n\n" (find-counterexample S T binalpha 3))
+(printf "The word ~a is a counterexample found via generator.\n\n" (find-counterexample-gen S T binalpha 3))
 
 ;;;;;; prefix hint ;;;;;;
 ; for some prefix p, for all words w of length less than k, p.w will have a different outcome on m1 and m2
