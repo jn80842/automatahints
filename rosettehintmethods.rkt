@@ -6,11 +6,7 @@
 
 (require "automata.rkt")
 
-(provide same-outcome? solve-automaton-ce solve-split-state)
-
-;; helper function: w is accepted on m1 and rejected on m2 or vice versa.
-(define (same-outcome? m1 m2 w)
-  (eq? (m1 w) (m2 w)))
+(provide solve-automaton-ce solve-split-state)
 
 (define (solve-automaton-ce m1 m2 alphabet k)
   (define w (word* k alphabet))

@@ -1,9 +1,7 @@
 #lang s-exp rosette
 
-(provide automaton automaton2 checkcheck word word*)
+(provide automaton automaton2 word word* same-outcome?)
 
-(define (checkcheck)
-  (printf "hello!\n"))
 
 ; adapted from Automata via Macros (Krishnamurthi)
 ; and Emina's automaton in Rosette
@@ -72,3 +70,7 @@
 (define (word* k alphabet)
   (define-symbolic* n number?)
   (take (word k alphabet) n))
+
+;; helper function: w is accepted on m1 and rejected on m2 or vice versa.
+(define (same-outcome? m1 m2 w)
+  (eq? (m1 w) (m2 w)))
