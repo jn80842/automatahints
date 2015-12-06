@@ -61,6 +61,7 @@
 
 (printf "Prefix hint:\n")
 (printf "The prefix ~a st. p followed by any word up to length k will not have the desired behavior.\n\n" (find-failing-prefix S2 T2 binalpha 3))
+(printf "The prefix ~a will not have the desired behavior, found via generator.\n\n" (find-failing-prefix-gen S2 T2 binalpha 3))
 
 ;;;;;;; split state hint ;;;;;;;
 ;; split states
@@ -88,6 +89,7 @@
 (define split-state-hint (find-split-state S3 T3 binalpha 10))
 (printf "\nSplit state hint:")
 (printf "\nWords that arrive in the state ~a have different behaviors on the true solution.\n\n" (car split-state-hint))
+(printf "Words that arrive in state ~a have diff behaviors on the true solution, found via generators.\n\n" (car (find-split-state-gen S3 T3 binalpha 3)))
                                                                                 
                   
 

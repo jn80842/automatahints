@@ -3,7 +3,7 @@
 (require racket/generator)
 (require "automata.rkt")
 
-(provide allwords bounded-words print-stream find-counterexample find-failing-prefix find-split-state find-counterexample-gen)
+(provide allwords bounded-words print-stream find-counterexample find-failing-prefix find-split-state find-split-state-gen find-counterexample-gen find-failing-prefix-gen)
 (define sigma2 (list "00" "01" "10" "11"))
 (define firstlist (list (list "00") (list "01" ) (list "10") (list "11")))
 
@@ -74,6 +74,16 @@
                                (bounded-words alphabet k))])
     (if (stream-empty? s) "no such prefix" (stream-first s))))
 
+(define (find-failing-prefix-gen M1 M2 alphabet k)
+  (let ([limit (words-up-to-k (length alphabet) k)]
+        [gen (wordgenerator alphabet)])
+    (letrec ([f (lambda (i)
+                (let ([p (gen)])
+                  (cond [(eq? i limit) "no such prefix"]
+                        [(failing-prefix M1 M2 alphabet k p) p]
+                        [else (f (add1 i))])))])
+      (f 1))))
+
 (define (same-final-state M w wprime)
   (eq? (M w) (M wprime)))
 (define (diff-outcomes M w wprime)
@@ -89,3 +99,14 @@
                         [(eq? j k) (f M1 M2 (+ i 1) 0 k)]
                         [else (f M1 M2 i (+ j 1) k)]))])
       (f M1 M2 0 0 k))))
+
+(define (find-split-state-gen M1 M2 alphabet k)
+  (let ([limit (words-up-to-k (length alphabet) k)]
+        [gen (wordgenerator alphabet)])
+    (letrec ([f (lambda (i j w gen2)
+                  (let ([wprime (gen2)])
+                    (cond [(eq? i limit) "no split state"]
+                          [(eq? j limit) (f (add1 i) 1 (gen) (wordgenerator alphabet))]
+                          [(and (same-final-state M1 w wprime ) (diff-outcomes M2 w wprime)) (list (M1 w) w wprime)]
+                          [else (f i (add1 j) w gen2)])))])
+      (f 1 1 (gen) (wordgenerator alphabet)))))
