@@ -11,6 +11,7 @@
 
 (require "automata.rkt")
 (require "rosettehintmethods.rkt")
+(require "bruteforcemethods.rkt")
 
 (define-lift string->number [(string?) racket/string->number])
 (define-lift string-length [(string?) racket/string-length])
@@ -77,6 +78,35 @@
                   ("111" → q2)]))
 
 ;; Sipser 1.33 bottom row equals top row x 3, reversed
+
+; with state names for split state hint
+; ideally we would not need to change the formatting? idk
+(define S133
+  (automaton2 q0
+             [q0 : "q0" ("00" → q0)
+                 ("01" → sink)
+                 ("10" → sink)
+                 ("11" → q1)]
+             [q1 : "q1" ("00" → sink)
+                 ("01" → q3)
+                 ("10" → q2)
+                 ("11" → q1)]
+             [q2 : "q2" ("00" → q2)
+                 ("01" → sink)
+                 ("10" → sink)
+                 ("11" → q1)]
+             [q3 : "q3" ("00" → q4)
+                 ("01" → sink)
+                 ("10" → sink)
+                 ("11" → q3)]
+             [q4 : "q4" ("00" → sink)
+                 ("01" → q2)
+                 ("10" → q3)
+                 ("11" → sink)]
+             [sink : "sink" ("00" → sink)
+                   ("01" → sink)
+                   ("10" → sink)
+                   ("11" → sink)]))
 (define T133
   (automaton q0
              [q0 : accept ("00" → q0)
@@ -169,12 +199,37 @@
 
 (printf "Counterexample hint:\n")
 (define greater-ce (solve-automaton-ce S134 T134 sigma2 4))
-(printf "The word ~a is a counterexample for automaton S134.\n\n" (evaluate greater-ce))
+(printf "The word ~a is a counterexample for automaton S134 (found via Rosette).\n" (evaluate greater-ce))
+(printf "The word ~a is a counterexample for automaton S134 (found via enumerative search).\n" (find-counterexample S134 T134 sigma2 4))
 
 (define (solve-check-pred m1 alphabet k predicate)
   (define w (word* k alphabet))
   (evaluate w (solve (assert (not (eq? (m1 w) (predicate (foldl sigma-n->decimal (list 0 0) w))))))))
 
-(printf "Counterexample hint through predicate:\n")
 (define greater-pred-ce (solve-check-pred S134 sigma2 3 greater-eq-pred))
-(printf "The word ~a is a counterexample for automaton S134.\n\n" (evaluate greater-pred-ce))
+(printf "The word ~a is a counterexample for automaton S134 (found via Rosette using predicate).\n\n" (evaluate greater-pred-ce))
+
+(printf "Prefix hint:\n")
+
+
+(define (prefixer w)
+  (define p (list (list-ref sigma2 (??))
+                  (list-ref sigma2 (??))
+                  (list-ref sigma2 (??))))
+  (append p w))
+(define (prefix-check m1 m2 prefixer w)
+  (assert (not (same-outcome? m1 m2 (prefixer w)))))
+(define wprime (word* 3 sigma2))
+(define binding
+  (synthesize #:forall (list wprime)
+              #:guarantee (prefix-check S134 T134 prefixer wprime)))
+(print-forms binding)
+
+(printf "The prefix ~a st. p followed by any word up to length k will not have the desired behavior (found via enumerative search).\n\n" (find-failing-prefix S134 T134 sigma2 3))
+
+;;;; split state on 2nd row = 1st row * 3 ;;;;
+(printf "Split state hint:\n")
+
+;; doesn't work yet! need to rewrite S133
+(printf "Words that arrive in state ~a have different behaviors on the true solution (found via Rosette).\n" (solve-split-state S133 T133 sigma2 4))
+(printf "Words that arrive in state ~a have different behaviors on the true solution (found via enumerative search).\n" (car (find-split-state S133 T133 sigma2 4)))
