@@ -198,20 +198,22 @@
 ;;;; counterexample on 2-col greater than ;;;;
 
 (printf "Counterexample hint:\n")
-(define greater-ce (solve-automaton-ce S134 T134 sigma2 4))
-(printf "The word ~a is a counterexample for automaton S134 (found via Rosette).\n" (evaluate greater-ce))
-(printf "The word ~a is a counterexample for automaton S134 (found via enumerative search).\n" (find-counterexample S134 T134 sigma2 4))
+(time (define greater-ce (solve-automaton-ce S134 T134 sigma2 4))
+      (define sol134 (evaluate greater-ce))
+(printf "The word ~a is a counterexample for automaton S134 (found via Rosette).\n" sol134))
+(time (printf "The word ~a is a counterexample for automaton S134 (found via enumerative search).\n" (find-counterexample S134 T134 sigma2 4)))
 
 (define (solve-check-pred m1 alphabet k predicate)
   (define w (word* k alphabet))
   (evaluate w (solve (assert (not (eq? (m1 w) (predicate (foldl sigma-n->decimal (list 0 0) w))))))))
-
+(time 
 (define greater-pred-ce (solve-check-pred S134 sigma2 3 greater-eq-pred))
-(printf "The word ~a is a counterexample for automaton S134 (found via Rosette using predicate).\n\n" (evaluate greater-pred-ce))
+(printf "The word ~a is a counterexample for automaton S134 (found via Rosette using predicate).\n" (evaluate greater-pred-ce)))
+(printf "\n")
 
 (printf "Prefix hint:\n")
 
-
+(time
 (define (prefixer w)
   (define p (list (list-ref sigma2 (??))
                   (list-ref sigma2 (??))
@@ -223,13 +225,12 @@
 (define binding
   (synthesize #:forall (list wprime)
               #:guarantee (prefix-check S134 T134 prefixer wprime)))
-(print-forms binding)
+(print-forms binding))
 
-(printf "The prefix ~a st. p followed by any word up to length k will not have the desired behavior (found via enumerative search).\n\n" (find-failing-prefix S134 T134 sigma2 3))
-
+(time (printf "The prefix ~a st. p followed by any word up to length k will not have the desired behavior (found via enumerative search).\n" (find-failing-prefix S134 T134 sigma2 3)))
+(printf "\n")
 ;;;; split state on 2nd row = 1st row * 3 ;;;;
 (printf "Split state hint:\n")
 
-;; doesn't work yet! need to rewrite S133
-(printf "Words that arrive in state ~a have different behaviors on the true solution (found via Rosette).\n" (solve-split-state S133 T133 sigma2 4))
-(printf "Words that arrive in state ~a have different behaviors on the true solution (found via enumerative search).\n" (car (find-split-state S133 T133 sigma2 4)))
+(time (printf "Words that arrive in state ~a have different behaviors on the true solution (found via Rosette).\n" (solve-split-state S133 T133 sigma2 4)))
+(time (printf "Words that arrive in state ~a have different behaviors on the true solution (found via enumerative search).\n" (car (find-split-state S133 T133 sigma2 4))))

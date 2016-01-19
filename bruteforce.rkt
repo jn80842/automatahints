@@ -86,3 +86,12 @@
 (define split-state-hint (find-split-state S3 T3 binalpha 10))
 (printf "\nSplit state hint:")
 (printf "\nWords that arrive in the state ~a have different behaviors on the true solution.\n\n" (car split-state-hint))
+
+;;;;;;;; sequence of counterexamples ;;;;;;
+;; sequence 1: get arbitrary number of counterexamples
+;; sequence 2: get arbitrary number of counterexamples that match some pattern
+
+
+
+;;;;;;;; small multiples ;;;;;;
+;; get counterexample, then get word with good outcome that has a close edit distance from counterexample
