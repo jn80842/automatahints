@@ -52,6 +52,22 @@ States in a DFA represent equivalence classes; any string that arrives in a part
 
 To find such a state, let's use a different search strategy; we'll use Rosette to synthesize an answer to the property we've formulated. Rosette is a solver-aided language that includes all of Racket; see here for instructions for installing and using Rosette.
 
-First, we need to make a change to the macros we use to create our DFA representations. We'll use the same macro to create the true DFA, but we'll tweak the one used to build the student DFA so that after consuming a word, it returns the name of the state it arrives in.
+First, we need to make a change to the macros we use to create our DFA representations. We'll use the same macro to create the true DFA, but we'll tweak the one used to build the student DFA so that after consuming a word, it returns the name of the state it arrives in. Given those behaviors, we need to synthesize two words that have the properties that they return the same value (a state name) on the student solution, but return different values (accept/reject) on the true solution.
+
+In Rosette, these two words will be represented by two symbolic values defined by the method `word*`, a data type representing a sequence of symbols from the chosen alphabet, which can be between zero and k symbols in length. We then solve for values that hold true for our chosen properties.
+
+```
+(define (solve-split-state M1 M2 alphabet k)
+  (define w (word* k alphabet))
+  (define wprime (word* k alphabet))
+  (m1 (evaluate w (solve (begin (assert (eq? (m1 w) (m1 wprime)))
+                (assert (not (eq? (m2 w) (m2 wprime)))))))))
+```
 
 ## A custom hint
+
+> Given the alphabet { [0 0 0], [0 0 1], [0 1 0], ... , [1 1 0], [1 1 1]}, write a DFA to accept the language of words where the binary numbers formed by the first and second digits in each triple added together equal the number formed by the third digits. For example, `[0 0 1] [1 1 1] [1 1 0]` would be in this language, because 011 + 011 = 110. (This problem is taken from Sipser's textbook *The Theory of Computation*).
+
+The previous two hints could be used for a wide variety of problems about writing DFAs. However, we can also define hints that are specific to a particular problem. In this problem, the symbols in our alphabet are used to express binary numbers. The challenge of the problem for students is to translate the process of handling binary numbers to defining a DFA; for example, they will need to consider how to account for a carry bit. Giving hints related to the syntactic structure of the DFA might be giving too much away. Instead, we will define a semantic hint that is expressed purely in the realm of binary arithmetic, rather than any properties of the DFA or even the alphabet itself.
+
+
