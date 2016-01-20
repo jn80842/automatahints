@@ -70,4 +70,20 @@ In Rosette, these two words will be represented by two symbolic values defined b
 
 The previous two hints could be used for a wide variety of problems about writing DFAs. However, we can also define hints that are specific to a particular problem. In this problem, the symbols in our alphabet are used to express binary numbers. The challenge of the problem for students is to translate the process of handling binary numbers to defining a DFA; for example, they will need to consider how to account for a carry bit. Giving hints related to the syntactic structure of the DFA might be giving too much away. Instead, we will define a semantic hint that is expressed purely in the realm of binary arithmetic, rather than any properties of the DFA or even the alphabet itself.
 
+If we represent the symbols of our alphabet as strings ("000", "001" and so on), we can write a method to take a list of such strings and return the three numbers they represent in binary. For example, given the word "000" "010" "111", we get back the list containing 3, 1, 3. Then, we can easily write a predicate that returns true if the first two numbers add up to the third and false otherwise. These methods, called `sigma3->decimal` and `add-pred` can be found in `binaryhints.rkt`.
+
+Since we can now compare the student's solution against this predicate and not the correct solution, we can write hints that check more fine-grained properties of the student's solution. For example, let's write a hint that checks that the student's solution correctly handles words consisting only of the symbols [0 0 0], [0 1 0], and [1 0 1]. These three symbols require no carries, so any word made up of only those symbols should always be accepted. We can do this by writing another Rosette solver, one looking for a word from that alphabet that is rejected by the student solution and returns true when given to the predicate. (In fact, since all such words should be accepted, we don't even need to use the predicate, but it will be helpful when writing other such hints.)
+
+```
+(define (solve-no-carry M alphabet k)
+  (define w (word* k alphabet))
+  (evaluate w (solve (assert (diff-outcome? (M w) (add-predicate w))))))
+
+(solve-no-carry M (list "000" "010" "101") 4)
+```
+
+If we can find such a word, we might give the student a hint such as "Consider addition when no carries are necessary". If we can't find one, we'll need to try synthesizing another hint. 
+
+We can write similar predicates to check another properties of addition. We might try to find two words that are not commutative on the student's solution (e.g, if 1 + 2 = 3, 2 + 1 should also equal 3). We could try and synthesize a word in which an odd number plus an odd number is claimed to equal an odd number. Most simply, we could find a counterexample word and report it to the user in decimal format (3 + 4 does not equal 8).
+
 

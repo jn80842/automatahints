@@ -195,6 +195,9 @@
 (define (times3-pred l) (eq? (* (car l) 3) (cadr l)))
 (define (greater-eq-pred l) (>= (car l) (cadr l)))
 
+(define (sigma3->decimal word)
+  (foldl sigma-n->decimal (list 0 0 0) word))
+
 ;;;; counterexample on 2-col greater than ;;;;
 
 (printf "Counterexample hint:\n")
@@ -234,3 +237,5 @@
 
 (time (printf "Words that arrive in state ~a have different behaviors on the true solution (found via Rosette).\n" (solve-split-state S133 T133 sigma2 4)))
 (time (printf "Words that arrive in state ~a have different behaviors on the true solution (found via enumerative search).\n" (car (find-split-state S133 T133 sigma2 4))))
+
+
