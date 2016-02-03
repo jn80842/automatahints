@@ -2,16 +2,24 @@
 
 *HINTDSL is standing in for a better name.*
 
-Student assigments are often submitted electronically, but while autograders may return scores, they rarely provide feedback to students beyond canned responses to common problems. Human graders can provide more detailed feedback, but the process is time-consuming and infeasible for large classes. HINTDSL provides instructors with a way of giving students insight into their mistakes automatically. A hint defined by HINTDSL requires as input only the true solution and the student's solution; it does not require any knowledge base or even an encoding of the problem itself.
+Consider a simple homework problem for a theory of computation class. The student is asked to draw a deterministic finite automaton that will accept the language of strings over the alphabet `{0, 1}` such that there are exactly two `0`s. The student submits the DFA below:
 
-A HINTDSL hint is an expression of some difference between the student's incorrect solution and the correct solution given by the instructor (of course, if the student's solution is correct, there is no need for a hint). The HINTDSL is flexible and lets the instructor choose what kind of information to provide to the student. We assume that instructors already have some means of testing if a student solution is correct and are only searching for hints if the solution is known to be incorrect.
+[studentsol1](images/exactly2consec0.png)
 
-The HINTDSL itself is a DSL built in Racket. An instructor uses HINTDSL to write a function that takes the student solution and true solution and returns the attributes necessary to express the hint to the student; an additional view layer can be used to present the hint in the desired formatting. Hints can synthesized using a variety of engines; examples below use enumerative search and Rosette.
+But the correct solution is actually:
 
-For this tutorial, we will create hints for homework problems in which the student writes deterministic finite automata. HINTDSL is sufficiently general to be used for a variety of domains, however.
+[truesol1](images/exactly20.png)
+
+An autograder can mark the student's solution incorrect, but we'd like to provide more useful feedback about the nature of the mistake. Human graders can supply more detailed feedback, but the process is time-consuming and doesn't scale to large class sizes. Instead, we'd like to programmatically return some sort of hint about the incorrect solution, such as a counterexample (`010100`), a property that describes some set of incorrectly classified strings ("consider strings with no consecutive `0`s"), or perhaps a graphical annotation on the student's DFA. HINTDSL is designed to allow instructors to generate this kind of feedback. 
+
+A HINTDSL hint is an expression of some difference between the student's incorrect solution and the correct solution given by the instructor (of course, if the student's solution is correct, there is no need for a hint). The HINTDSL is flexible and lets the instructor choose what kind of information to provide to the student. We assume that instructors already have some means of testing if a student solution is correct and are only searching for hints if the solution is known to be incorrect. A hint defined by HINTDSL requires as input only the true solution and the student's solution; it does not require any knowledge base or even an encoding of the problem itself.
+
+There are three types of users who interact with HINTDSL. The first type is that of a student, who submits solutions and receives feedback defined in HINTDSL. The second type is that of an instructor, who writes the hints for each problem. HINTDSL is designed to allow instructors to put together hints fairly easily; ideally, a TA would be able to write hints with only minimal extra effort while authoring a problem set. This tutorial will primarily discuss HINTDSL from the point of view of this user type. The third user type is that of an admin who will create the machinery necessary to connect the homework submissions to the HINTDSL hints. This work should only be done once per course (or perhaps shared among those teaching similar courses). In the examples below, an admin would need to write macros to take the existing representation of the student's DFA (e.g., as JSON) and transform it into a Racket construct.  
+
+Although this tutorial considers hints for problems writing DFAs, HINTDSL is sufficiently general to be used for a variety of domains.
 
 ## A simple counterexample hint
-> Given the alphabet {0, 1}, write a DFA that accepts all strings that contain exactly 2 consecutive '0's.
+> Given the alphabet {0, 1}, write a DFA that accepts all strings that contain exactly 2 `0`s.
 
 As a first example, let's write a hint that finds a string that is incorrectly accepted or incorrectly rejected on the student's solution.
 
