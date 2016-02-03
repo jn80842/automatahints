@@ -3,7 +3,8 @@
 (require racket/generator)
 (require "automata.rkt")
 
-(provide wordgenerator find-counterexample find-failing-prefix find-split-state)
+(provide wordgenerator find-counterexample find-failing-prefix find-split-state exists-word exists-word-forall-words forall-words
+         exists-word-exists-word)
 (define sigma2 (list "00" "01" "10" "11"))
 (define firstlist (list (list "00") (list "01" ) (list "10") (list "11")))
 
@@ -27,34 +28,36 @@
 (define (words-up-to-k alphabet-length k)
   (for/sum ([i (in-range (+ k 1))]) (expt alphabet-length i)))
 
-(define (find-counterexample M1 M2 alphabet k)
+; (predicate M1 M2 word) returns #t if word should be returned, else #f
+
+(define (exists-word M1 M2 alphabet k predicate)
   (let ([limit (words-up-to-k (length alphabet) k)]
         [gen (wordgenerator alphabet)])
     (letrec ([f (lambda (i)
                   (let ([w (gen)])
-                    (cond [(eq? i limit) "no counterexample"]
-                          [(not (same-outcome? M1 M2 w)) w]
+                    (cond [(eq? i limit) "no such word found"]
+                          [(predicate M1 M2 w) (word w)]
                           [else (f (add1 i))])))])
       (f 1))))
 
-(define (failing-prefix M1 M2 alphabet k p)
+; test if some predicate is true for all words wrt some word w
+(define (forall-words M1 M2 alphabet k predicate w)
   (let ([limit (words-up-to-k (length alphabet) k)]
         [gen (wordgenerator alphabet)])
     (letrec ([f (lambda (i)
-                  (cond [(eq? i limit) #t]
-                        [(same-outcome? M1 M2 (append p (gen))) #f]
+                  (cond [(eq? i limit) #t] ; predicate holds for all words up to limit
+                        [(not (predicate M1 M2 w (gen))) #f] ; predicate is false for at least 1 word
                         [else (f (add1 i))]))])
       (f 1))))
-    
 
-(define (find-failing-prefix M1 M2 alphabet k)
+(define (exists-word-forall-words M1 M2 alphabet k predicate)
   (let ([limit (words-up-to-k (length alphabet) k)]
         [gen (wordgenerator alphabet)])
     (letrec ([f (lambda (i)
-                (let ([p (gen)])
-                  (cond [(eq? i limit) "no such prefix"]
-                        [(failing-prefix M1 M2 alphabet k p) p]
-                        [else (f (add1 i))])))])
+                  (let ([w (gen)])
+                    (cond [(eq? i limit) null]
+                          [(forall-words M1 M2 alphabet k predicate w) (word w)]
+                          [else (f (add1 i))])))])
       (f 1))))
 
 (define (same-final-state? M w wprime)
@@ -62,15 +65,15 @@
 (define (diff-outcomes? M w wprime)
   (not (eq? (M w) (M wprime))))
 
-(define (find-split-state M1 M2 alphabet k)
+(define (exists-word-exists-word M1 M2 alphabet k predicate)
   (let ([limit (words-up-to-k (length alphabet) k)]
         [gen (wordgenerator alphabet)])
     (letrec ([f (lambda (i j w gen2)
-                  (let ([wprime (gen2)])
-                    (cond [(eq? i limit) "no split state"]
-                          [(eq? j limit) (f (add1 i) 1 (gen) (wordgenerator alphabet))]
-                          [(and (same-final-state? M1 w wprime) (diff-outcomes? M2 w wprime)) (list (M1 w) w wprime)]
-                          [else (f i (add1 j) w gen2)])))])
+                (let ([wprime (gen2)])
+                  (cond [(eq? i limit) null]
+                        [(eq? j limit) (f (add1 i) 1 (gen) (wordgenerator alphabet))]
+                        [(predicate M1 M2 w wprime) (list (word w) (word wprime))]
+                        [else (f i (add1 j) w gen2)])))])
       (f 1 1 (gen) (wordgenerator alphabet)))))
 
 ;;;;;;;; stream based methods ;;;;;;;
@@ -118,3 +121,45 @@
                         [(eq? j k) (f M1 M2 (+ i 1) 0 k)]
                         [else (f M1 M2 i (+ j 1) k)]))])
       (f M1 M2 0 0 k))))
+
+;;;;;;; old non refactored methods ;;;;;;;;;
+
+(define (find-counterexample M1 M2 alphabet k)
+  (let ([limit (words-up-to-k (length alphabet) k)]
+        [gen (wordgenerator alphabet)])
+    (letrec ([f (lambda (i)
+                  (let ([w (gen)])
+                    (cond [(eq? i limit) "no counterexample"]
+                          [(not (same-outcome? M1 M2 w)) w]
+                          [else (f (add1 i))])))])
+      (f 1))))
+
+(define (failing-prefix M1 M2 alphabet k p)
+  (let ([limit (words-up-to-k (length alphabet) k)]
+        [gen (wordgenerator alphabet)])
+    (letrec ([f (lambda (i)
+                  (cond [(eq? i limit) #t]
+                        [(same-outcome? M1 M2 (append p (gen))) #f]
+                        [else (f (add1 i))]))])
+      (f 1))))
+
+(define (find-failing-prefix M1 M2 alphabet k)
+  (let ([limit (words-up-to-k (length alphabet) k)]
+        [gen (wordgenerator alphabet)])
+    (letrec ([f (lambda (i)
+                (let ([p (gen)])
+                  (cond [(eq? i limit) "no such prefix"]
+                        [(failing-prefix M1 M2 alphabet k p) p]
+                        [else (f (add1 i))])))])
+      (f 1))))
+
+(define (find-split-state M1 M2 alphabet k)
+  (let ([limit (words-up-to-k (length alphabet) k)]
+        [gen (wordgenerator alphabet)])
+    (letrec ([f (lambda (i j w gen2)
+                  (let ([wprime (gen2)])
+                    (cond [(eq? i limit) "no split state"]
+                          [(eq? j limit) (f (add1 i) 1 (gen) (wordgenerator alphabet))]
+                          [(and (same-final-state? M1 w wprime) (diff-outcomes? M2 w wprime)) (list (M1 w) w wprime)]
+                          [else (f i (add1 j) w gen2)])))])
+      (f 1 1 (gen) (wordgenerator alphabet)))))

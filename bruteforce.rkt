@@ -31,7 +31,10 @@
 (define binalpha (list 0 1))
 
 (printf "Counterexample hint:\n")
-(printf "The word ~a is a counterexample.\n\n" (find-counterexample S T binalpha 3))
+(define ce (exists-word S T binalpha 3 counterexample-pred))
+(if (empty? ce)
+(printf "No counterexample of size ~a of less was found.\n\n" 3)
+(printf "The word ~a is a counterexample.\n\n" (word-value ce)))
 
 ;;;;;; prefix hint ;;;;;;
 ; for some prefix p, for all words w of length less than k, p.w will have a different outcome on m1 and m2
@@ -58,7 +61,10 @@
                  (1 → s2)]))
 
 (printf "Prefix hint:\n")
-(printf "The prefix ~a st. p followed by any word up to length k will not have the desired behavior.\n\n" (find-failing-prefix S2 T2 binalpha 3))
+(define prefix (exists-word-forall-words S2 T2 binalpha 3 bad-prefix-pred))
+(if (empty? prefix)
+    (printf "No prefix of length ~a or less was found.\n\n" 3)
+    (printf "The prefix ~a st. p followed by any word up to length ~a will not have the desired behavior.\n\n" (word-value prefix) 3))
 
 ;;;;;;; split state hint ;;;;;;;
 ;; split states
@@ -85,7 +91,12 @@
 
 (define split-state-hint (find-split-state S3 T3 binalpha 10))
 (printf "\nSplit state hint:")
-(printf "\nWords that arrive in the state ~a have different behaviors on the true solution.\n\n" (car split-state-hint))
+
+(define split-state-words (exists-word-exists-word S3 T3 binalpha 10 split-state-pred))
+
+(if (empty? split-state-words)
+    (printf "\nNo split state was found when checking words up to ~a in length.\n\n" 10)
+    (printf "\nWords that arrive in the state ~a have different behaviors on the true solution.\n\n" (S3 (word-value (car split-state-words)))))
 
 ;;;;;;;; sequence of counterexamples ;;;;;;
 ;; sequence 1: get arbitrary number of counterexamples

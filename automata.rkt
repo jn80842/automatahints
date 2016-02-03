@@ -1,7 +1,7 @@
 #lang s-exp rosette
 
-(provide automaton automaton2 word word* same-outcome?)
-
+(provide (struct-out word) automaton automaton2 symbolic-word symbolic-word* same-outcome? counterexample-pred
+         bad-prefix-pred split-state-pred)
 
 ; adapted from Automata via Macros (Krishnamurthi)
 ; and Emina's automaton in Rosette
@@ -59,18 +59,29 @@
               ...)
               init-state)]))
 
+(struct word (value))
+
 ;; from https://github.com/emina/rosette/blob/master/sdsl/fsm/query.rkt
 ; Returns a symbolic word of length k, drawn from the given alphabet.
-(define (word k alphabet)
+(define (symbolic-word k alphabet)
   (for/list ([i k])
     (define-symbolic* idx number?)
     (list-ref alphabet idx)))
 
 ; Returns a symbolic word of length up to k, drawn from the given alphabet.
-(define (word* k alphabet)
+(define (symbolic-word* k alphabet)
   (define-symbolic* n number?)
-  (take (word k alphabet) n))
+  (take (symbolic-word k alphabet) n))
 
 ;; helper function: w is accepted on m1 and rejected on m2 or vice versa.
 (define (same-outcome? m1 m2 w)
   (eq? (m1 w) (m2 w)))
+
+(define (counterexample-pred M1 M2 word)
+  (not (eq? (M1 word) (M2 word))))
+
+(define (bad-prefix-pred M1 M2 prefix word)
+  (not (same-outcome? M1 M2 (append prefix word))))
+
+(define (split-state-pred M1 M2 word wordprime)
+  (and (eq? (M1 word) (M1 wordprime)) (not (eq? (M2 word) (M2 wordprime)))))

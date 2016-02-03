@@ -36,7 +36,8 @@
 (printf "Counterexample hint:\n")
 
 
-(printf "The word ~a is a counterexample.\n\n" (solve-automaton-ce S T (list 0 1) 3))
+;(printf "The word ~a is a counterexample.\n\n" (solve-automaton-ce S T (list 0 1) 3))
+(printf "The word ~a is a counterexample.\n\n" (word-value (exists-word S T (list 0 1) 3 counterexample-pred)))
 
 ; for some prefix p, for all words w of length less than k, p.w will have a different outcome on m1 and m2
 ; we want to synthesize p
@@ -69,7 +70,7 @@
 (define (prefix-check m1 m2 prefixer w)
   (assert (not (same-outcome? m1 m2 (prefixer w)))))
 
-(define ww (word* 3 '(0 1)))
+(define ww (symbolic-word* 3 '(0 1)))
 (define binding
   (synthesize #:forall (list ww)
               #:guarantee (prefix-check S2 T2 prefixer ww)))
