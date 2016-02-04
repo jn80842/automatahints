@@ -21,35 +21,30 @@ Although this tutorial considers hints for problems writing DFAs, HINTDSL is suf
 ## A simple counterexample hint
 > Given the alphabet {0, 1}, write a DFA that accepts all strings that contain exactly 2 `0`s.
 
-As a first example, let's write a hint that finds a string that is incorrectly accepted or incorrectly rejected on the student's solution.
+As a first example, let's write a hint that finds a string that is incorrectly accepted or incorrectly rejected on the student's solution. We assume that we already have a macro that will take the student's submitted automaton and return a Racket function that takes a word as an argument and returns true if that word is part of the language defined by that automaton. We won't discuss the details of the macro here, but see `automata.rkt` for a sample implementation.
 
-First of all, we need some apparatus to handle the DFA domain. We write a Racket macro that will provide a function that, given a word in the DFA's alphabet, will return true if the word is accepted and false is not. The precise definition of this macro depends on the format the student's solutions will be submitted in (for example, if the student is working in a web interface, the submitted automaton might be defined in JSON or XML). The details of the macro are not discussed here, but see `automata.rkt` for a sample implementation.
-
-Now, let's define our hint. Hints are always an expression of the difference between the student solution and the true solution. We will write a hint expressing the property "a word that the student DFA accepts and the correct DFA rejects, or vice versa". This property can be written as the following boolean function:
+Now, let's define our hint. Hints are always an expression of the difference between the student solution and the true solution. We will write a hint expressing the property "a word that the student DFA accepts and the correct DFA rejects, or vice versa". Essentially, we're asking if such a word exists, and if so, what it is. To do this, we'll use the `exists-word` function. This function takes the true solution and student solution DFAs, the alphabet the DFAs' language is made up of, and the maximum length of word we should consider, and a predicate that will return true if a given word has the property we're looking forward. This predicate should be written as a function that takes the student solution, true solutions and a word as an argument. Since we're looking for a counterexample, we can write the predicate as follows:
 
 ```
 (define (diff-outcome? M1 M2 word)
   (not (eq? (M1 word) (M2 word))))
 ```
+
 Since `M1` and `M2` are the result of the Racket macro that transforms an automaton representation into a function, if those two functions have different outcomes on the same input word, their corresponding automata behave differently on that word.
 
-Now that we have a property defined, we need to define a search strategy to find a word where that function returns true. Since the problem is fairly simple, let's use the simplest possible search strategy and enumerate all words in the {0, 1} alphabet until we find a word to serve as a counterexample. We'll make use of two convenience methods: `wordgenerator`, a generator that will return the next word in the language of all strings made from symbols in our alphabet, and `words-up-to-k`, which calculates the number of words in that language that have a length less than k.
+We can also test our predicate by supplying it with a word, without having to run the full hint to get an a result. Assume we have a student solution called `S1` and a true solution `T1`. We can check that `(diff-outcome? S1 T1 '(0 1 0 1 0))` returns `true` and that `(diff-outcome? S1 T1 '(0 0))` is false.
 
-Using those methods, we write a method that will recursively consume words from the generator until it has found a word for which our chosen property is true, or until we have checked all the words of length less than k.
+Now that our hint is defined, we can now automatically call this method when the student submits their solution and return the counterexample word, suitably formatted. Below is code that outputs the code using simple print statements.
 
 ```
-(define (find-counterexample M1 M2 alphabet k)
-  (let ([limit (words-up-to-k (length alphabet) k)]
-        [gen (wordgenerator alphabet)])
-    (letrec ([f (lambda (i)
-                  (let ([w (gen)])
-                    (cond [(eq? i limit) "no counterexample"]
-                          [(diff-outcome? M1 M2 w) w]
-                          [else (f (add1 i))])))])
-      (f 1))))
+(printf "Counterexample hint:\n")
+(define ce (exists-word S1 T1 (list 0 1) 3 diff-outcome?))
+(if (empty? ce)
+    (printf "No counterexample of size ~a of less was found.\n\n" 3)
+    (printf "The word ~a is a counterexample.\n\n" (word-value ce)))
 ```
 
-We can now automatically call this method when the student submits their solution and return the counterexample word, suitably formatted.
+If this hint was run on the examples above, it would return the counterexample word `010`.
 
 ## A more complicated hint
 
