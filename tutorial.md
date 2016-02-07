@@ -45,9 +45,7 @@ Now, let's define our hint. Hints are always an expression of the difference bet
 
 `exists-word` takes the true solution and student solution DFAs, the alphabet the DFAs' language is made up of, and the maximum length of word we should consider, and a predicate that will return true if a given word has the property we're looking forward. This predicate function should have the signature
 
-***
-`(predicate *true-DFA* *student-DFA* *word*) -> boolean`
-***
+>`(predicate true-DFA student-DFA word) -> boolean`
 
 This predicate should be written as a function that takes the student solution, true solutions and a word as an argument. Since we're looking for a counterexample, we can write the predicate as follows:
 
@@ -58,7 +56,7 @@ This predicate should be written as a function that takes the student solution, 
 
 Since `M1` and `M2` are the result of the Racket macro that transforms an automaton representation into a function, if those two functions have different outcomes on the same input word, their corresponding automata behave differently on that word.
 
-We can now test our predicate by supplying it with a word, without having to run the full hint to search for a result. Assume we have a student solution called `S1` and a true solution `T1`. We can check that `(diff-outcome? S1 T1 '(0 1 0 1))` returns `true` and that `(diff-outcome? S1 T1 '(0 0))` is false.
+We can now test our predicate by supplying it with a word, without having to run the full hint to search for a result. Assume we have a student solution called `S1` and a true solution `T1`. We can check that `(diff-outcome? S1 T1 '(0 1 0 1))` returns true and that `(diff-outcome? S1 T1 '(0 0))` is false.
 
 Now that our hint is defined, we can now automatically call this method when the student submits their solution and return the counterexample word, suitably formatted. Below is code that outputs the hint using simple print statements.
 
@@ -73,25 +71,21 @@ If this hint was run on the examples above, it would return the counterexample w
 
 ## A more complicated hint
 
-Let's write a hint that expresses a slightly more abstract difference between the student and true solution. We'll use the same problem and DFAs for the following example.
+Let's write a hint that expresses a slightly more abstract difference between the student and true solution. We'll use the same problem and DFAs as above for the following example.
 
-States in a DFA represent equivalence classes; any string that arrives in a particular state, no matter what path it followed to get there, should have the same outcome. If two words arrive in the same state on the student DFA, but have different outcomes on the true DFA (i.e. one is accepted and one is rejected), then those words belong to different equivalence classes and therefore shouldn't be able to arrive in the same state. If we can identify two such words, then we know the state that they arrive in defines an incorrect equivalence class, and we can return the name of that state to the student as a hint.
+States in a DFA represent equivalence classes; any string that arrives in a particular state, no matter what path it followed to get there, should have the same outcome. If two words arrive in the same state on the student DFA, but have different outcomes on the true DFA (i.e. one is accepted and one is rejected), then those words belong to different equivalence classes and therefore shouldn't be able to arrive in the same state. If we can identify two such words, then we know the state that they arrive in defines an incorrect equivalence class. We can then return the name of that state to the student as a hint.
 
-First, we'll need to use a different macro to transform the representation of the student solution.  This macro will create a function that returns the name of the state the word arrived in after all symbols were consumed. (For example, given the word `010`, the student solution above would return `s0`.) We'll use the original macro to transform the true solution, so it returns true if the word it's given is part of the language the DFA defines.
+First, we'll need to use a different macro to transform the representation of the student solution.  This macro will create a function that returns the name of the state the word arrived in after all symbols were consumed. (For example, given the word `010`, the student solution above would return `s0`.) We'll use the original macro to transform the true solution, so it returns true if the word it's given is part of the language the DFA defines and false otherwise.
 
-This hint is trying to find two words that arrive in the same state on the student solution, but only one of them is accepted by the true solution. Unlike the example above, we need to find if two words with this property exist, and if so, what they are. For this we'll use the `exists-word-exists-word` construction. 
+This hint is trying to find two words that both arrive in the same state on the student solution, but only one of them is accepted by the true solution. Unlike the example above, we need to find if two words with this property exist, and if so, what they are. For this we'll use the `exists-word-exists-word` construction. 
 
-***
-`(exists-word-exists-word *true-DFA* *student-DFA* *alphabet* *k* *predicate*) -> (list word1 word2)`
-***
+>`(exists-word-exists-word true-DFA student-DFA alphabet k predicate) -> (list word1 word2)`
 
 It behaves very similarly to the `exists-word` construct, but its predicate function takes two words rather than just one. 
 
-***
-`(predicate true-DFA student-DFA word1 word2) -> boolean`
-***
+> `(predicate true-DFA student-DFA word1 word2) -> boolean`
 
-We define the predicate function as below (keep in mind that `M1`, the student DFA, returns state names, but `M2`, the true DFA, returns a boolean).
+We define the predicate function as below (keep in mind that `M1`, the student DFA, returns a state name, but `M2`, the true DFA, returns a boolean).
 
 ```
 (define (split-state-pred M1 M2 word wordprime)
@@ -112,9 +106,10 @@ Given this predicate, as well as the other arguments, `exists-word-exists-word` 
 
 ## A custom hint
 
-> Given the alphabet ![sigma3](images/sigma3.png), write a DFA to accept the language of words where the binary numbers formed by the first and second digits in each triple added together equal the number formed by the third digits. For example, ![sigma3ex](images/sigma3ex.png) would be in this language, because 011 (3) + 011 (3) = 110 (6). (This problem is taken from Sipser's textbook *The Theory of Computation*).
+> Given the alphabet ![sigma3](images/sigma3.png), write a DFA to accept the language of words where the binary numbers formed by the first and second digits in each triple added together equal the number formed by the third digits. For example, ![sigma3ex](images/sigma3ex.png) would be in this language, because 011 (3) + 011 (3) = 110 (6). 
+>(This problem is taken from Sipser's textbook *The Theory of Computation*).
 
-The previous two hints could be used for a wide variety of problems about writing DFAs. However, we can also define hints that are specific to a particular problem. In this problem, the symbols in our alphabet are used to express binary numbers. The challenge of the problem for students is to translate the process of handling binary numbers to defining a DFA; for example, they will need to consider how to account for a carry bit. Giving hints related to the syntactic structure of the DFA might be giving too much away. Instead, we will define a semantic hint that is expressed purely in the realm of binary arithmetic, rather than any properties of the DFA or even the alphabet itself. For this example, we'll consider the true solution
+The previous two hints could be used for a wide variety of problems about writing DFAs. However, we can also define hints that are specific to a particular problem. In this problem, the symbols in our alphabet are used to express binary numbers. The challenge of the problem for students is to translate the process of handling binary numbers to defining a DFA; for example, they will need to consider how to account for a carry bit. Giving hints related to the syntactic structure of the DFA might be giving too much away. Instead, we'll check the DFA for a subset of the addition functionality and express that to the student. For this example, we'll consider the true solution
 
 ![truesol3](images/truebinaryadd.png)
 
@@ -127,8 +122,10 @@ For this hint, we will check to see if the student solution can handle adding tw
 ```
 (define ce (exists-word S3 T3 (list "000" "010" "101") 5 diff-outcome?))
 (if (empty? ce)
-    (printf "It looks like your DFA works correctly if your addition has no carries. Experiment with some inputs where carries are necessary.\n\n")
-    (printf "Your DFA fails when performing addition that requires no carries, such as the input ~a.\n\n" (word-value ce)))
+    (printf "It looks like your DFA works correctly if your addition has no carries. 
+              Experiment with some inputs where carries are necessary.\n\n")
+    (printf "Your DFA fails when performing addition that requires no carries, 
+              such as the input ~a.\n\n" (word-value ce)))
 ```
 
 ## Underlying apparatus
