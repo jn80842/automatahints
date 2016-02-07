@@ -84,4 +84,4 @@
   (not (same-outcome? M1 M2 (append prefix word))))
 
 (define (split-state-pred M1 M2 word wordprime)
-  (and (eq? (M1 word) (M1 wordprime)) (not (eq? (M2 word) (M2 wordprime)))))
+  (and (eq? (M2 word) (M2 wordprime)) (not (eq? (M1 word) (M1 wordprime)))))
