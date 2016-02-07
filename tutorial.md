@@ -22,11 +22,11 @@ or
 
 HINTDSL is designed to allow instructors to generate this kind of feedback. 
 
-A HINTDSL hint is an expression of some difference between the student's incorrect solution and the correct solution given by the instructor. HINTDSL allows the instructor to choose what kind of information to show the student about the nature of their mistake. A hint defined by HINTDSL requires as input only the true solution and the student's solution; it does not require any knowledge base or even an encoding of the problem itself.
+A HINTDSL hint is an expression of some difference between the student's incorrect solution and the correct solution given by the instructor. HINTDSL allows the instructor to choose what kind of information to show the student about the nature of their mistake. A hint defined by HINTDSL requires as input only the true solution and the student's solution; it does not require any knowledge base specific to the domain.
 
 There are three types of users who interact with HINTDSL. 
-+ Students, who submits solutions and receives feedback defined in HINTDSL. 
-+ Instructors, who writes the hints for each problem. HINTDSL is designed to allow instructors to put together hints fairly easily; ideally, a TA would be able to write hints with only minimal extra effort while authoring a problem set. This tutorial will primarily discuss HINTDSL from the point of view of this user type. 
++ Students, who submit solutions and receives feedback defined in HINTDSL. 
++ Instructors, who write the hints for each problem. HINTDSL is designed to allow instructors to put together hints fairly easily; ideally, a TA would be able to write hints with only minimal extra effort while authoring a problem set. This tutorial will primarily discuss HINTDSL from the point of view of this user type. 
 + Admins. Some work will be needed to set up HINTDSL to receive inputs from whatever system students are using to complete homework problems, and to deliver HINTDSL outputs for display. If any additional functionality is needed for a desired hint, the admin may choose to extend HINTDSL as well. 
 
 All the hints in this tutorial are written for the HINTDSL automata module.
@@ -40,9 +40,8 @@ We'll start by assuming we have some means of consuming the student's solution, 
 
 Now, let's define our hint. Hints are always an expression of the difference between the student solution and the true solution. We will write a hint searching for a word that makes the counterexample predicate true: "some word that is accepted by the student DFA and rejected by the true DFA, or vice versa". To do this, we'll use the `exists-word` construction. 
 
-***
-`(exists-word *true-DFA* *student-DFA* *alphabet* *k* *predicate*) -> word`
-***
+>`(exists-word true-DFA student-DFA alphabet k predicate) -> word`
+
 
 `exists-word` takes the true solution and student solution DFAs, the alphabet the DFAs' language is made up of, and the maximum length of word we should consider, and a predicate that will return true if a given word has the property we're looking forward. This predicate function should have the signature
 
