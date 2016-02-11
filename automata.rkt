@@ -68,7 +68,7 @@
      (lambda (stream trace)
       ; (let ([trace '()])
        (cond
-         [(empty? stream) trace]
+         [(empty? stream) (append trace (list name))]
          [else
           (case (first stream)
             [(label) (target (rest stream) (append trace (list name)))] ...

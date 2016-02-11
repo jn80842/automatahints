@@ -14,6 +14,17 @@
              [s3 : (0 → s3)
                  (1 → s3)]))
 
+(define S2_trace
+  (automaton3 s0
+             [s0 : "s0" (0 → s1)
+                 (1 → s0)]
+             [s1 : "s1" (0 → s2)
+                 (1 → s1)]
+             [s2 : "s2" (0 → s3)
+                 (1 → s2)]
+             [s3 : "s3" (0 → s3)
+                 (1 → s3)]))
+
 (define T2
   (automaton s0
              [s0 : (0 → s1)
@@ -120,6 +131,28 @@
                                                            (if (empty? wprime) (f (add1 i)) (list (word w) wprime)))]
                           [else (f (add1 i))])))])
       (f 1))))
+
+(define r (exists-small-multiple S2 T2 (list 0 1) 4))
+(define bad-val (word-value (car r)))
+(define good-val (word-value (cadr r)))
+
+(define (find-state-pair M1 M2 word current-state)
+  (if (same-outcome? M1 M2 word)
+      (list (cons current-state "green"))
+      (list (cons current-state "red"))))
+
+(define (code-states M1 M2 trace word)
+  (if (eq? (length trace) (add1 (length word)))
+      (letrec ([f (lambda (w wp tr trmap)
+                    (if (empty? w)
+                        (append trmap (find-state-pair M1 M2 wp (car tr)))
+                        (f (cdr w) (append wp (list (car w))) (cdr tr) (append trmap (find-state-pair M1 M2 wp (car tr))))))])
+        (f word '() trace '()))
+      null))
+
+(code-states S2 T2 (S2_trace bad-val '()) bad-val)
+(code-states S2 T2 (S2_trace good-val '()) good-val)
+  
                
 
   
