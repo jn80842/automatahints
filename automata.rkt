@@ -1,6 +1,6 @@
 #lang s-exp rosette
 
-(provide (struct-out word) automaton automaton2 symbolic-word symbolic-word* same-outcome? counterexample-pred
+(provide (struct-out word) automaton automaton2 automaton3 symbolic-word symbolic-word* same-outcome? counterexample-pred
          bad-prefix-pred split-state-pred)
 
 ; adapted from Automata via Macros (Krishnamurthi)
@@ -42,12 +42,13 @@
   (syntax-rules (→)
     [(_ name  (label → target) ...)
      (lambda (stream)
+       (let ([trace '()])
        (cond
          [(empty? stream) name]
          [else
           (case (first stream)
             [(label) (target (rest stream))] ...
-            [else false])]))]
+            [else false])])))]
      ))
 
 (define-syntax automaton2
@@ -60,6 +61,28 @@
               init-state)]))
 
 (struct word (value))
+
+(define-syntax process-state3
+  (syntax-rules (→)
+    [(_ name  (label → target) ...)
+     (lambda (stream trace)
+      ; (let ([trace '()])
+       (cond
+         [(empty? stream) trace]
+         [else
+          (case (first stream)
+            [(label) (target (rest stream) (append trace (list name)))] ...
+            [else false])]))]
+     ))
+
+(define-syntax automaton3
+  (syntax-rules (:)
+    [(_ init-state
+        (state : response ...)
+        ...)
+     (letrec ([state (process-state3 response ...)]
+              ...)
+              init-state)]))
 
 ;; from https://github.com/emina/rosette/blob/master/sdsl/fsm/query.rkt
 ; Returns a symbolic word of length k, drawn from the given alphabet.
