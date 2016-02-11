@@ -67,7 +67,9 @@ Now that our hint is defined, we can now automatically call this method when the
     (printf "Consider the counterexample ~a.\n\n" (word-value ce)))
 ```
 
-If this hint was run on the examples above, it would return the counterexample word `010`, and the student would see the message `Consider the counterexample 010`.
+If this hint was run on the examples above, it would return the counterexample word `010`, and the student would see the message 
+
+`Consider the counterexample 010`.
 
 ## A more complicated hint
 
@@ -103,6 +105,12 @@ Given this predicate, as well as the other arguments, `exists-word-exists-word` 
     (printf "\nNo split state was found when checking words up to ~a in length.\n\n" 10)
     (printf "\nWords that arrive in the state ~a have different behaviors on the true solution.\n\n" (S1 (word-value (car split-state-words)))))
 ```
+
+And the hint a student would see on submitting the DFA example above would be
+
+```
+Words that arrive in the states s0 have different behaviors on the true solution.
+````
 
 ## A custom hint
 
