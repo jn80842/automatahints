@@ -1,7 +1,9 @@
 #lang s-exp rosette
 
-(provide (struct-out word) automaton automaton2 automaton3 symbolic-word symbolic-word* same-outcome? counterexample-pred
-         bad-prefix-pred split-state-pred)
+(provide (struct-out word)
+         (struct-out fsm)
+         automaton automaton2 automaton3 symbolic-word symbolic-word* same-outcome? counterexample-pred
+         bad-prefix-pred split-state-pred alphabet states)
 
 (struct fsm (graph exec)
   #:property prop:procedure
@@ -9,42 +11,31 @@
 
 ; adapted from Automata via Macros (Krishnamurthi)
 ; and Emina's automaton in Rosette
-(define-syntax process-state
-  (syntax-rules (accept →)
-    [(_ accept (label → target) ...)
-     (lambda (stream)
-       (cond
-         [(empty? stream) true]
-         [else
-          (case (first stream)
-            [(label) (target (rest stream))] ...
-            [else false])]))]
-    [(_(label → target) ...)
-     (lambda (stream)
-       (cond
-         [(empty? stream) false]
-         [else
-          (case (first stream)
-            [(label) (target (rest stream))]
-            ...
-            [else false])]))]
-     ))
-
 (define-syntax automaton
-  (syntax-rules (:)
+  (syntax-rules (: → accept)  
     [(_ init-state
-        (state : response ...)
-        ...)
-     (letrec ([state (process-state response ...)]
-              ...)
-              init-state)]))
+        (state : (accept : acceptstate)
+               (label → target) ...) ...)
+     (letrec ([state
+               (lambda (stream)
+                 (cond
+                   [(empty? stream) acceptstate]  
+                   [else
+                    (case (first stream)
+                      [(label) (target (rest stream))] ...
+                      [else false])]))]
+              ...) 
+       (fsm '((state (label target) ...) ...) init-state))]
+
+    ))
 
 ;; split states
 ; some state s in S where strings that arrive in s are both accepted and rejected by T
 
 (define-syntax process-state2
-  (syntax-rules (→)
-    [(_ name  (label → target) ...)
+  (syntax-rules (: → accept)
+    [(_ name
+        (label → target) ...)
      (lambda (stream)
        (let ([trace '()])
        (cond
@@ -67,8 +58,9 @@
 (struct word (value))
 
 (define-syntax process-state3
-  (syntax-rules (→)
-    [(_ name  (label → target) ...)
+  (syntax-rules (: →)
+    [(_ name
+        (label → target) ...)
      (lambda (stream trace)
       ; (let ([trace '()])
        (cond
@@ -87,6 +79,17 @@
      (letrec ([state (process-state3 response ...)]
               ...)
               init-state)]))
+
+(define (alphabet m)
+  (remove-duplicates 
+   (for/fold ([out '()]) ([ne (fsm-graph m)] #:unless (null? (cdr ne)))
+     (append out (map car (cdr ne))))))
+
+(define (states m)
+  (remove-duplicates 
+   (for/fold ([out '()]) ([ne (fsm-graph m)] #:unless (null? (cdr ne)))
+     (append out (map cadr (cdr ne))))))
+
 
 ;; from https://github.com/emina/rosette/blob/master/sdsl/fsm/query.rkt
 ; Returns a symbolic word of length k, drawn from the given alphabet.

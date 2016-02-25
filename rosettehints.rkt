@@ -11,29 +11,37 @@
 
 (define S
   (automaton s0
-             [s0 : (0 → s1)
+             [s0 : (accept : #f)
+                 (0 → s1)
                  (1 → s0)]
-             [s1 : (0 → s2)
+             [s1 : (accept : #f)
+                 (0 → s2)
                  (1 → s0)]
-             [s2 : accept (0 → s3)
+             [s2 : (accept : #t)
+                 (0 → s3)
                  (1 → s2)]
-             [s3 : (0 → s3)
+             [s3 : (accept : #f)
+                 (0 → s3)
                  (1 → s3)]))
 
 (define T
   (automaton s0
-             [s0 : (0 → s1)
+             [s0 : (accept : #f)
+                 (0 → s1)
                  (1 → s0)]
-             [s1 : (0 → s2)
+             [s1 : (accept : #f)
+                 (0 → s2)
                  (1 → s1)]
-             [s2 : accept (0 → s3)
+             [s2 : (accept : #t)
+                 (0 → s3)
                  (1 → s2)]
-             [s3 : (0 → s3)
+             [s3 : (accept : #f)
+                 (0 → s3)
                  (1 → s3)]))
 
 ;(printf "The word ~a is a counterexample.\n\n" (solve-automaton-ce S T (list 0 1) 3))
 (printf "Counterexample hint:\n")
-(define ce (exists-word S T (list 0 1) 3 counterexample-pred))
+(define ce (exists-word S T 3 counterexample-pred))
 (if (empty? ce)
     (printf "No counterexample of size ~a of less was found.\n\n" 3)
     (printf "The word ~a is a counterexample.\n\n" (word-value ce)))
@@ -43,26 +51,33 @@
 
 (define S2
   (automaton s0
-             [s0 : (0 → s1)
+             [s0 : (accept : #f)
+                 (0 → s1)
                  (1 → s0)]
-             [s1 : (0 → s2)
+             [s1 : (accept : #f)
+                 (0 → s2)
                  (1 → s1)]
-             [s2 : accept (0 → s3)
+             [s2 : (accept : #t)
+                 (0 → s3)
                  (1 → s2)]
-             [s3 : (0 → s3)
+             [s3 : (accept : #f)
+                 (0 → s3)
                  (1 → s3)]))
 
 (define T2
   (automaton s0
-             [s0 : (0 → s1)
+             [s0 : (accept : #f)
+                 (0 → s1)
                  (1 → s0)]
-             [s1 : (0 → s2)
+             [s1 : (accept : #f)
+                 (0 → s2)
                  (1 → s1)]
-             [s2 : accept (0 → s2)
+             [s2 : (accept : #t)
+                 (0 → s2)
                  (1 → s2)]))
 
 (printf "Prefix hint:\n")
-(define prefix (exists-word-forall-words S2 T2 (list 0 1) 3 bad-prefix-pred))
+(define prefix (exists-word-forall-words S2 T2 3 bad-prefix-pred))
 (if (empty? prefix)
     (printf "No prefix of length ~a or less was found.\n\n" 3)
     (printf "The prefix ~a st. p followed by any word up to length ~a will not have the desired behavior.\n\n" (word-value prefix) 3))
@@ -96,17 +111,20 @@
                   (1 → s3)]))
 (define T3
   (automaton s0
-             [s0 : accept (0 → s1)
+             [s0 : (accept : #t)
+                 (0 → s1)
                  (1 → s0)]
-             [s1 : accept (0 → s1)
+             [s1 : (accept : #t)
+                 (0 → s1)
                  (1 → s2)]
-             [s2 : (0 → s2)
+             [s2 : (accept : #f)
+                 (0 → s2)
                  (1 → s2)]))
 
 (printf "\nSplit state hint:\n")
 
 ;(printf "\nWords that arrive in the state ~a have different behaviors on the true solution.\n\n" (solve-split-state S3 T3 (list 0 1) 3))
-(define split-state-words (exists-word-exists-word S3 T3 (list 0 1) 10 split-state-pred))
+(define split-state-words (exists-word-exists-word S3 T3 10 split-state-pred))
 
 (if (empty? split-state-words)
     (printf "\nNo split state was found when checking words up to ~a in length.\n\n" 10)
