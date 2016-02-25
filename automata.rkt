@@ -3,6 +3,10 @@
 (provide (struct-out word) automaton automaton2 automaton3 symbolic-word symbolic-word* same-outcome? counterexample-pred
          bad-prefix-pred split-state-pred)
 
+(struct fsm (graph exec)
+  #:property prop:procedure
+  (struct-field-index exec))
+
 ; adapted from Automata via Macros (Krishnamurthi)
 ; and Emina's automaton in Rosette
 (define-syntax process-state

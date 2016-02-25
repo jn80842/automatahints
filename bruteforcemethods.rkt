@@ -3,7 +3,8 @@
 (require racket/generator)
 (require "automata.rkt")
 
-(provide wordgenerator find-counterexample find-failing-prefix find-split-state exists-word exists-word-forall-words forall-words
+(provide wordgenerator find-counterexample find-failing-prefix find-split-state exists-word
+         exists-word-forall-words forall-words
          exists-word-exists-word)
 (define sigma2 (list "00" "01" "10" "11"))
 (define firstlist (list (list "00") (list "01" ) (list "10") (list "11")))
@@ -29,36 +30,37 @@
   (for/sum ([i (in-range (+ k 1))]) (expt alphabet-length i)))
 
 ; (predicate M1 M2 word) returns #t if word should be returned, else #f
-
 (define (exists-word M1 M2 alphabet k predicate)
   (let ([limit (words-up-to-k (length alphabet) k)]
         [gen (wordgenerator alphabet)])
-    (letrec ([f (lambda (i)
-                  (let ([w (gen)])
-                    (cond [(eq? i limit) "no such word found"]
-                          [(predicate M1 M2 w) (word w)]
-                          [else (f (add1 i))])))])
-      (f 1))))
+    (for/first ([i (in-range (add1 limit))]
+                [w (in-producer gen)]
+                #:when (or (predicate M1 M2 w) (eq? i limit)))
+      (if (eq? i limit)
+      null
+      (word w))
+      )))
 
 ; test if some predicate is true for all words wrt some word w
 (define (forall-words M1 M2 alphabet k predicate w)
   (let ([limit (words-up-to-k (length alphabet) k)]
         [gen (wordgenerator alphabet)])
-    (letrec ([f (lambda (i)
-                  (cond [(eq? i limit) #t] ; predicate holds for all words up to limit
-                        [(not (predicate M1 M2 w (gen))) #f] ; predicate is false for at least 1 word
-                        [else (f (add1 i))]))])
-      (f 1))))
+    (for/first ([i (in-range (add1 limit))]
+                [wprime (in-producer gen)]
+                #:when (or (eq? i limit) (not (predicate M1 M2 w wprime))))
+      (eq? i limit) ; return true if we checked all wprime makes predicate true, false otherwise
+      )))
 
 (define (exists-word-forall-words M1 M2 alphabet k predicate)
-  (let ([limit (words-up-to-k (length alphabet) k)]
-        [gen (wordgenerator alphabet)])
-    (letrec ([f (lambda (i)
-                  (let ([w (gen)])
-                    (cond [(eq? i limit) null]
-                          [(forall-words M1 M2 alphabet k predicate w) (word w)]
-                          [else (f (add1 i))])))])
-      (f 1))))
+  (let* ([limit (words-up-to-k (length alphabet) k)]
+        [gen (wordgenerator alphabet)]
+        [result (for/first ([i (in-range (add1 limit))]
+                            [w (in-producer gen)]
+                            #:when (forall-words M1 M2 alphabet k predicate w))
+                  (word w))])
+    (if (word? result)
+        result
+        null)))
 
 (define (same-final-state? M w wprime)
   (eq? (M w) (M wprime)))
@@ -75,6 +77,36 @@
                         [(predicate M1 M2 w wprime) (list (word w) (word wprime))]
                         [else (f i (add1 j) w gen2)])))])
       (f 1 1 (gen) (wordgenerator alphabet)))))
+
+;;;;;;;; generator letrec methods ;;;
+(define (exists-word-letrec M1 M2 alphabet k predicate)
+  (let ([limit (words-up-to-k (length alphabet) k)]
+        [gen (wordgenerator alphabet)])
+    (letrec ([f (lambda (i)
+                  (let ([w (gen)])
+                    (cond [(eq? i limit) "no such word found"]
+                          [(predicate M1 M2 w) (word w)]
+                          [else (f (add1 i))])))])
+      (f 1))))
+
+(define (forall-words-letrec M1 M2 alphabet k predicate w)
+  (let ([limit (words-up-to-k (length alphabet) k)]
+        [gen (wordgenerator alphabet)])
+    (letrec ([f (lambda (i)
+                  (cond [(eq? i limit) #t] ; predicate holds for all words up to limit
+                        [(not (predicate M1 M2 w (gen))) #f] ; predicate is false for at least 1 word
+                        [else (f (add1 i))]))])
+      (f 1))))
+
+(define (exists-word-forall-words-letrec M1 M2 alphabet k predicate)
+  (let ([limit (words-up-to-k (length alphabet) k)]
+        [gen (wordgenerator alphabet)])
+    (letrec ([f (lambda (i)
+                  (let ([w (gen)])
+                    (cond [(eq? i limit) null]
+                          [(forall-words M1 M2 alphabet k predicate w) (word w)]
+                          [else (f (add1 i))])))])
+      (f 1))))
 
 ;;;;;;;; stream based methods ;;;;;;;
 
