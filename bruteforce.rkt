@@ -36,7 +36,6 @@
                  (1 → s3)]))
 
 (define sigma2 (list (list 0 0) (list 0 1) (list 1 0) (list 1 1)))
-(define binalpha (list 0 1))
 
 (printf "Counterexample hint:\n")
 (define ce (exists-word S T counterexample-pred))

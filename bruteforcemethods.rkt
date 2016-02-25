@@ -3,9 +3,10 @@
 (require racket/generator)
 (require "automata.rkt")
 
-(provide wordgenerator find-counterexample find-failing-prefix exists-word
-         exists-word-forall-words forall-words
-         exists-word-exists-word)
+(provide wordgenerator find-counterexample find-failing-prefix exists-word exists-word-f
+         exists-word-forall-words exists-word-forall-words-f
+         forall-words
+         exists-word-exists-word exists-word-exists-word-f)
 (define sigma2 (list "00" "01" "10" "11"))
 (define firstlist (list (list "00") (list "01" ) (list "10") (list "11")))
 
@@ -28,6 +29,21 @@
 
 (define (words-up-to-k alphabet-length k)
   (for/sum ([i (in-range (+ k 1))]) (expt alphabet-length i)))
+
+(define (exists-word-f T predicate)
+  (lambda (S)
+    (let* ([sigma (alphabet T)]
+         [s-states (states S)]
+         [t-states (states T)]
+         [limit (words-up-to-k (length sigma) (* (length s-states) (length t-states)))]
+         [gen (wordgenerator sigma)])
+    (for/first ([i (in-range (add1 limit))]
+                [w (in-producer gen)]
+                #:when (or (predicate S T w) (eq? i limit)))
+      (if (eq? i limit)
+      null
+      (word w))
+      ))))
 
 ; (predicate M1 M2 word) returns #t if word should be returned, else #f
 (define (exists-word M1 M2 predicate)
@@ -71,6 +87,21 @@
         result
         null)))
 
+(define (exists-word-forall-words-f T predicate)
+  (lambda (S)
+    (let* ([sigma (alphabet T)]
+         [s-states (states S)]
+         [t-states (states T)]
+         [limit (words-up-to-k (length sigma) (* (length s-states) (length t-states)))]
+         [gen (wordgenerator sigma)]
+         [result (for/first ([i (in-range (add1 limit))]
+                            [w (in-producer gen)]
+                            #:when (forall-words S T predicate w))
+                  (word w))])
+    (if (word? result)
+        result
+        null))))
+
 (define (same-final-state? M w wprime)
   (eq? (M w) (M wprime)))
 (define (diff-outcomes? M w wprime)
@@ -89,6 +120,21 @@
                         [(predicate M1 M2 w wprime) (list (word w) (word wprime))]
                         [else (f i (add1 j) w gen2)])))])
       (f 1 1 (gen) (wordgenerator sigma)))))
+
+(define (exists-word-exists-word-f T predicate)
+  (lambda (S)
+    (let* ([sigma (alphabet T)]
+           [s-states (states S)]
+           [t-states (states T)]
+           [limit (words-up-to-k (length sigma) (* (length s-states) (length t-states)))]
+           [gen (wordgenerator sigma)])
+      (letrec ([f (lambda (i j w gen2)
+                    (let ([wprime (gen2)])
+                      (cond [(eq? i limit) null]
+                            [(eq? j limit) (f (add1 i) 1 (gen) (wordgenerator sigma))]
+                            [(predicate S T w wprime) (list (word w) (word wprime))]
+                            [else (f i (add1 j) w gen2)])))])
+        (f 1 1 (gen) (wordgenerator sigma))))))
 
 ;;;;;;;; generator letrec methods ;;;
 (define (exists-word-letrec M1 M2 alphabet k predicate)
