@@ -32,11 +32,12 @@
 ;; split states
 ; some state s in S where strings that arrive in s are both accepted and rejected by T
 
-(define-syntax process-state2
-  (syntax-rules (: → accept)
-    [(_ name
-        (label → target) ...)
-     (lambda (stream)
+(define-syntax automaton2
+  (syntax-rules (:)
+    [(_ init-state
+        (state : name (label → target) ... ) ...)
+     (letrec ([state
+               (lambda (stream)
        (let ([trace '()])
        (cond
          [(empty? stream) name]
@@ -44,24 +45,18 @@
           (case (first stream)
             [(label) (target (rest stream))] ...
             [else false])])))]
-     ))
-
-(define-syntax automaton2
-  (syntax-rules (:)
-    [(_ init-state
-        (state : response ...)
-        ...)
-     (letrec ([state (process-state2 response ...)]
               ...)
-              init-state)]))
+             (fsm '((state (label target) ... ) ...) init-state))]))
 
 (struct word (value))
 
-(define-syntax process-state3
+(define-syntax automaton3
   (syntax-rules (: →)
-    [(_ name
-        (label → target) ...)
-     (lambda (stream trace)
+    [(_ init-state
+        (state : name (label → target) ...)
+        ...)
+     (letrec ([state
+               (lambda (stream trace)
       ; (let ([trace '()])
        (cond
          [(empty? stream) (append trace (list name))]
@@ -69,16 +64,8 @@
           (case (first stream)
             [(label) (target (rest stream) (append trace (list name)))] ...
             [else false])]))]
-     ))
-
-(define-syntax automaton3
-  (syntax-rules (:)
-    [(_ init-state
-        (state : response ...)
-        ...)
-     (letrec ([state (process-state3 response ...)]
               ...)
-              init-state)]))
+              (fsm '((state (label target) ... ) ... ) init-state))]))
 
 (define (alphabet m)
   (remove-duplicates 

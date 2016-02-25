@@ -39,7 +39,7 @@
 (define binalpha (list 0 1))
 
 (printf "Counterexample hint:\n")
-(define ce (exists-word S T 3 counterexample-pred))
+(define ce (exists-word S T counterexample-pred))
 (if (empty? ce)
 (printf "No counterexample of size ~a of less was found.\n\n" 3)
 (printf "The word ~a is a counterexample.\n\n" (word-value ce)))
@@ -76,7 +76,7 @@
                  (1 → s2)]))
 
 (printf "Prefix hint:\n")
-(define prefix (exists-word-forall-words S2 T2 3 bad-prefix-pred))
+(define prefix (exists-word-forall-words S2 T2 bad-prefix-pred))
 (if (empty? prefix)
     (printf "No prefix of length ~a or less was found.\n\n" 3)
     (printf "The prefix ~a st. p followed by any word up to length ~a will not have the desired behavior.\n\n" (word-value prefix) 3))
@@ -109,7 +109,7 @@
 
 (printf "\nSplit state hint:")
 
-(define split-state-words (exists-word-exists-word S3 T3 10 split-state-pred))
+(define split-state-words (exists-word-exists-word S3 T3 split-state-pred))
 
 (if (empty? split-state-words)
     (printf "\nNo split state was found when checking words up to ~a in length.\n\n" 10)

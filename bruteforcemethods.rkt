@@ -3,7 +3,7 @@
 (require racket/generator)
 (require "automata.rkt")
 
-(provide wordgenerator find-counterexample find-failing-prefix find-split-state exists-word
+(provide wordgenerator find-counterexample find-failing-prefix exists-word
          exists-word-forall-words forall-words
          exists-word-exists-word)
 (define sigma2 (list "00" "01" "10" "11"))
@@ -30,10 +30,12 @@
   (for/sum ([i (in-range (+ k 1))]) (expt alphabet-length i)))
 
 ; (predicate M1 M2 word) returns #t if word should be returned, else #f
-(define (exists-word M1 M2 k predicate)
+(define (exists-word M1 M2 predicate)
   (let* ([sigma (alphabet M2)]
-        [limit (words-up-to-k (length sigma) k)]
-        [gen (wordgenerator sigma)])
+         [m1states (states M1)]
+         [m2states (states M2)]
+         [limit (words-up-to-k (length sigma) (* (length m1states) (length m2states)))]
+         [gen (wordgenerator sigma)])
     (for/first ([i (in-range (add1 limit))]
                 [w (in-producer gen)]
                 #:when (or (predicate M1 M2 w) (eq? i limit)))
@@ -43,23 +45,27 @@
       )))
 
 ; test if some predicate is true for all words wrt some word w
-(define (forall-words M1 M2 k predicate w)
+(define (forall-words M1 M2 predicate w)
   (let* ([sigma (alphabet M2)]
-        [limit (words-up-to-k (length sigma) k)]
-        [gen (wordgenerator sigma)])
+         [m1states (states M1)]
+         [m2states (states M2)]
+         [limit (words-up-to-k (length sigma) (* (length m1states) (length m2states)))]
+         [gen (wordgenerator sigma)])
     (for/first ([i (in-range (add1 limit))]
                 [wprime (in-producer gen)]
                 #:when (or (eq? i limit) (not (predicate M1 M2 w wprime))))
       (eq? i limit) ; return true if we checked all wprime makes predicate true, false otherwise
       )))
 
-(define (exists-word-forall-words M1 M2 k predicate)
+(define (exists-word-forall-words M1 M2 predicate)
   (let* ([sigma (alphabet M2)]
-         [limit (words-up-to-k (length sigma) k)]
-        [gen (wordgenerator sigma)]
-        [result (for/first ([i (in-range (add1 limit))]
+         [m1states (states M1)]
+         [m2states (states M2)]
+         [limit (words-up-to-k (length sigma) (* (length m1states) (length m2states)))]
+         [gen (wordgenerator sigma)]
+         [result (for/first ([i (in-range (add1 limit))]
                             [w (in-producer gen)]
-                            #:when (forall-words M1 M2 k predicate w))
+                            #:when (forall-words M1 M2 predicate w))
                   (word w))])
     (if (word? result)
         result
@@ -70,9 +76,11 @@
 (define (diff-outcomes? M w wprime)
   (not (eq? (M w) (M wprime))))
 
-(define (exists-word-exists-word M1 M2 k predicate)
+(define (exists-word-exists-word M1 M2 predicate)
   (let* ([sigma (alphabet M2)]
-        [limit (words-up-to-k (length sigma) k)]
+         [m1states (states M1)]
+         [m2states (states M2)]
+        [limit (words-up-to-k (length sigma) (* (length m1states) (length m2states)))]
         [gen (wordgenerator sigma)])
     (letrec ([f (lambda (i j w gen2)
                 (let ([wprime (gen2)])
