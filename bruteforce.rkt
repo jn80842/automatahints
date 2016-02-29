@@ -1,78 +1,68 @@
 #lang racket
 
+(require racket/engine)
+
 (require "automata.rkt")
+(require "exampledfas.rkt")
 (require "bruteforcemethods.rkt")
 
+;; fake correctness checker, since all our examples are wrong
+(define (correct-check S) #f)
+
 ;;;; counterexample ;;;;;
-
-(define S
-  (automaton s0
-             [s0 : (accept : #f)
-                 (0 → s1)
-                 (1 → s0)]
-             [s1 : (accept : #f)
-                 (0 → s2)
-                 (1 → s0)]
-             [s2 : (accept : #t)
-                 (0 → s3)
-                 (1 → s2)]
-             [s3 : (accept : #f)
-                 (0 → s3)
-                 (1 → s3)]))
-
-(define T
-  (automaton s0
-             [s0 : (accept : #f)
-                 (0 → s1)
-                 (1 → s0)]
-             [s1 : (accept : #f)
-                 (0 → s2)
-                 (1 → s1)]
-             [s2 : (accept : #t)
-                 (0 → s3)
-                 (1 → s2)]
-             [s3 : (accept : #f)
-                 (0 → s3)
-                 (1 → s3)]))
-
-(define sigma2 (list (list 0 0) (list 0 1) (list 1 0) (list 1 1)))
-
 (printf "Counterexample hint:\n")
-(define ce (exists-word S T counterexample-pred))
-(if (empty? ce)
-(printf "No counterexample of size ~a of less was found.\n\n" 3)
-(printf "The word ~a is a counterexample.\n\n" (word-value ce)))
+
+(define word-gen (words (alphabet T))) ;; unbounded word generator
+
+(define counterexample-generator
+  (exists-word-f word-gen T counterexample-pred))
+
+(define (display-hint hint-generator)
+  (lambda (S)
+    (if (correct-check S)
+        (printf "Correct.\n\n")
+        (let ([hint (hint-generator S)])
+          (if (empty? hint)
+              (printf "No counterexample could be found.\n\n")
+              (printf "The word ~a is a counterexample.\n\n" (word-value hint)))))))
+
+(define counterexample-hint (display-hint counterexample-generator))
+
+(counterexample-hint S)
+
+(define (hint-e hint-generator)
+  (lambda (S)
+    (engine
+   (λ (_)
+     (hint-generator S)))))
+
+(define (get-result eng [timeout 10000])
+  (engine-run timeout eng)
+  (engine-result eng))
+
+(define (display2 correct? hint-engine)
+  (lambda (S)
+    (if (correct? S)
+        (printf "Your solution is correct.\n\n")
+        (let ([hint-result (get-result (hint-engine S))])
+          (if (word? hint-result)
+              (printf "The word ~a is a counterexample.\n\n" (word-value hint-result))
+              (printf "No counterexample could be found.\n\n"))))))
+
+(define he (hint-e counterexample-generator))
+(define hint2 (display2 correct-check he))
+
+
+(define e (engine
+           (λ (_)
+             (let loop ()
+               (displayln "hi")
+               (sleep 1)
+               (loop)))))
 
 ;;;;;; prefix hint ;;;;;;
 ; for some prefix p, for all words w of length less than k, p.w will have a different outcome on m1 and m2
 ; we want to synthesize p
-
-(define S2
-  (automaton s0
-             [s0 : (accept : #f)
-                 (0 → s1)
-                 (1 → s0)]
-             [s1 : (accept : #f)
-                 (0 → s2)
-                 (1 → s1)]
-             [s2 : (accept : #t)
-                 (0 → s3)
-                 (1 → s2)]
-             [s3 : (accept : #f)
-                 (0 → s3)
-                 (1 → s3)]))
-
-(define T2
-  (automaton s0
-             [s0 : (accept : #f)
-                 (0 → s1)
-                 (1 → s0)]
-             [s1 : (accept : #f)
-                 (0 → s2)
-                 (1 → s1)]
-             [s2 : (accept : #t)
-                 (0 → s2)
-                 (1 → s2)]))
 
 (printf "Prefix hint:\n")
 (define prefix (exists-word-forall-words S2 T2 bad-prefix-pred))
@@ -83,28 +73,6 @@
 ;;;;;;; split state hint ;;;;;;;
 ;; split states
 ; some state s in S where strings that arrive in s are both accepted and rejected by T
-
-(define S3
-  (automaton2 s0
-              [s0 : "s0" (0 → s1)
-                  (1 → s3)]
-              [s1 : "s1" (0 → s3)
-                  (1 → s2)]
-              [s2 : "s2" (0 → s2)
-                  (1 → s2)]
-              [s3 : "s3" (0 → s3)
-                  (1 → s3)]))
-(define T3
-  (automaton s0
-             [s0 : (accept : #t)
-                 (0 → s1)
-                 (1 → s0)]
-             [s1 : (accept : #t)
-                 (0 → s1)
-                 (1 → s2)]
-             [s2 : (accept : #f)
-                 (0 → s2)
-                 (1 → s2)]))
 
 (printf "\nSplit state hint:")
 

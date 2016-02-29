@@ -3,7 +3,7 @@
 (require racket/generator)
 (require "automata.rkt")
 
-(provide wordgenerator find-counterexample find-failing-prefix exists-word exists-word-f
+(provide wordgenerator words find-counterexample find-failing-prefix exists-word exists-word-f
          exists-word-forall-words exists-word-forall-words-f
          forall-words
          exists-word-exists-word exists-word-exists-word-f)
@@ -27,23 +27,30 @@
                        (yield (car workinglst))
                        (loop (cdr workinglst) originallst)))))))
 
+(define (words alphabet [k 100])
+  (generator ()
+             (begin
+               (yield (word '()))
+               (let loop ([workinglst (map (lambda (x) (list x)) alphabet)]
+                          [originallst (map (lambda (x) (list x)) alphabet)]
+                          [limit (words-up-to-k (length alphabet) k)]
+                          [i 0])
+                 (if (eq? limit i)
+                     null
+                     (if (empty? workinglst)
+                         (loop (extend-word-by-one alphabet originallst) (extend-word-by-one alphabet originallst) limit (add1 i))
+                         (begin
+                           (yield (word (car workinglst)))
+                           (loop (cdr workinglst) originallst limit (add1 i)))))))))
+
 (define (words-up-to-k alphabet-length k)
   (for/sum ([i (in-range (+ k 1))]) (expt alphabet-length i)))
 
-(define (exists-word-f T predicate)
+(define (exists-word-f gen T predicate)
   (lambda (S)
-    (let* ([sigma (alphabet T)]
-         [s-states (states S)]
-         [t-states (states T)]
-         [limit (words-up-to-k (length sigma) (* (length s-states) (length t-states)))]
-         [gen (wordgenerator sigma)])
-    (for/first ([i (in-range (add1 limit))]
-                [w (in-producer gen)]
-                #:when (or (predicate S T w) (eq? i limit)))
-      (if (eq? i limit)
-      null
-      (word w))
-      ))))
+    (for/first ([w (in-producer gen)]
+                #:when (or (empty? w) (predicate S T (word-value w))))
+      w)))
 
 ; (predicate M1 M2 word) returns #t if word should be returned, else #f
 (define (exists-word M1 M2 predicate)
