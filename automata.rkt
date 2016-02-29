@@ -3,7 +3,7 @@
 (provide (struct-out word)
          (struct-out fsm)
          automaton automaton2 automaton3 symbolic-word symbolic-word* same-outcome? counterexample-pred
-         bad-prefix-pred split-state-pred alphabet states)
+         bad-prefix-pred split-state-pred alphabet states bounded-word-length)
 
 (struct fsm (graph exec)
   #:property prop:procedure
@@ -76,6 +76,9 @@
   (remove-duplicates 
    (for/fold ([out '()]) ([ne (fsm-graph m)] #:unless (null? (cdr ne)))
      (append out (map cadr (cdr ne))))))
+
+(define (bounded-word-length M1 M2)
+  (* (length (states M1)) (length (states M2))))
 
 
 ;; from https://github.com/emina/rosette/blob/master/sdsl/fsm/query.rkt
