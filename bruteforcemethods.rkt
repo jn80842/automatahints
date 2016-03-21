@@ -54,7 +54,7 @@
 ; or hit end of sequence and return #t
 (define (forall-words gen S T predicate w)
   (for/first ([wprime (in-producer gen)]
-              #:when (or (empty? wprime) (not (predicate S T w wprime))))
+              #:when (or (empty? wprime) (not (predicate S T (word-value w) (word-value wprime)))))
        (empty? wprime)))
 
 (define (exists-word-forall-words wss T predicate)

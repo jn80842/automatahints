@@ -122,7 +122,7 @@
   (not (eq? (M1 word) (M2 word))))
 
 (define (bad-prefix-pred M1 M2 prefix w)
-  (not (same-outcome? M1 M2 (append (word-value prefix) (word-value w)))))
+  (not (same-outcome? M1 M2 (append prefix w))))
 
 (define (split-state-pred M1 M2 word wordprime)
   (and (eq? (M1 word) (M1 wordprime)) (not (eq? (M2 word) (M2 wordprime)))))
