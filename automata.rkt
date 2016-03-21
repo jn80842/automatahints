@@ -1,23 +1,32 @@
 #lang s-exp rosette
 
-(provide (struct-out word)
+(require racket/engine)
+
+(provide (struct-out word-search-space)
+         (struct-out word)
          (struct-out fsm)
-         automaton automaton2 automaton3 symbolic-word symbolic-word* same-outcome? counterexample-pred
-         bad-prefix-pred split-state-pred alphabet states bounded-word-length)
+         automaton automaton2 automaton3
+         symbolic-word symbolic-word*
+         same-outcome? counterexample-pred bad-prefix-pred split-state-pred
+         alphabet states bounded-word-length timeout-hint hint)
+
+(struct word (value))
+
+(struct word-search-space (alphabet k))
 
 (struct fsm (graph exec)
   #:property prop:procedure
   (struct-field-index exec))
 
 ; adapted from Automata via Macros (Krishnamurthi)
-; and Emina's automaton in Rosette
+; and Emina's automaton examples in Rosette
 (define-syntax automaton
   (syntax-rules (: → accept)  
     [(_ init-state
         (state : (accept : acceptstate)
                (label → target) ...) ...)
      (letrec ([state
-               (lambda (stream)
+               (λ (stream)
                  (cond
                    [(empty? stream) acceptstate]  
                    [else
@@ -37,7 +46,7 @@
     [(_ init-state
         (state : name (label → target) ... ) ...)
      (letrec ([state
-               (lambda (stream)
+               (λ (stream)
        (let ([trace '()])
        (cond
          [(empty? stream) name]
@@ -48,15 +57,13 @@
               ...)
              (fsm '((state (label target) ... ) ...) init-state))]))
 
-(struct word (value))
-
 (define-syntax automaton3
   (syntax-rules (: →)
     [(_ init-state
         (state : name (label → target) ...)
         ...)
      (letrec ([state
-               (lambda (stream trace)
+               (λ (stream trace)
       ; (let ([trace '()])
        (cond
          [(empty? stream) (append trace (list name))]
@@ -80,6 +87,20 @@
 (define (bounded-word-length M1 M2)
   (* (length (states M1)) (length (states M2))))
 
+(define (timeout-hint hint-generator [timeout 10000])
+  (λ (S)
+    (let ([hint-engine (engine (λ (_) (hint-generator S)))])
+      (engine-run timeout hint-engine)
+      (engine-result hint-engine))))
+
+(define (hint correct-behavior hint-chain fallback)
+  (λ (S)
+    (if ((car correct-behavior) S)
+        (cadr correct-behavior)
+        (unless (for*/first ([hint-pair hint-chain]
+                            #:when (not (empty? ((car hint-pair) S))))
+                  ((cdr hint-pair) ((car hint-pair) S)))
+          (fallback)))))
 
 ;; from https://github.com/emina/rosette/blob/master/sdsl/fsm/query.rkt
 ; Returns a symbolic word of length k, drawn from the given alphabet.
@@ -100,8 +121,8 @@
 (define (counterexample-pred M1 M2 word)
   (not (eq? (M1 word) (M2 word))))
 
-(define (bad-prefix-pred M1 M2 prefix word)
-  (not (same-outcome? M1 M2 (append prefix word))))
+(define (bad-prefix-pred M1 M2 prefix w)
+  (not (same-outcome? M1 M2 (append (word-value prefix) (word-value w)))))
 
 (define (split-state-pred M1 M2 word wordprime)
-  (and (eq? (M2 word) (M2 wordprime)) (not (eq? (M1 word) (M1 wordprime)))))
+  (and (eq? (M1 word) (M1 wordprime)) (not (eq? (M2 word) (M2 wordprime)))))
