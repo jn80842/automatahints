@@ -45,9 +45,17 @@
 
 (define (exists-word wss T predicate)
   (λ (S)
-    (for/first ([w (in-producer (words (word-search-space-alphabet wss) (word-search-space-k wss)))]
+    (for/first ([w (in-producer (words (word-search-space-alphabet wss) (word-search-space-k wss)) null)]
                 #:when (or (empty? w) (predicate S T (word-value w))))
       w)))
+
+(define (exists-word-gen wss T predicate)
+  (λ (S)
+    (generator ()
+               (begin
+                 (for ([w (in-producer (words (word-search-space-alphabet wss) (word-search-space-k wss)))]
+                       #:when (or (empty? w) (predicate S T (word-value w))))
+                   (yield w))))))
 
 ; test if some predicate is true for all words wrt some word w
 ; iterate, find some wprime that makes predicate false and return #f
