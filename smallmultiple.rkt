@@ -2,20 +2,25 @@
 
 (require racket/generator)
 (require "automata.rkt")
+(require "bruteforcemethods.rkt")
 
 (define S2
   (automaton s0
-             [s0 : (0 → s1)
+             [s0 : (accept : #f)
+                 (0 → s1)
                  (1 → s0)]
-             [s1 : (0 → s2)
+             [s1 : (accept : #f)
+                 (0 → s2)
                  (1 → s1)]
-             [s2 : accept (0 → s3)
+             [s2 : (accept : #t)
+                 (0 → s3)
                  (1 → s2)]
-             [s3 : (0 → s3)
+             [s3 : (accept : #f)
+                 (0 → s3)
                  (1 → s3)]))
 
 (define S2_trace
-  (automaton3 s0
+  (automaton2 s0
              [s0 : "s0" (0 → s1)
                  (1 → s0)]
              [s1 : "s1" (0 → s2)
@@ -27,28 +32,33 @@
 
 (define T2
   (automaton s0
-             [s0 : (0 → s1)
+             [s0 : (accept : #f)
+                 (0 → s1)
                  (1 → s0)]
-             [s1 : (0 → s2)
+             [s1 : (accept : #f)
+                 (0 → s2)
                  (1 → s1)]
-             [s2 : accept (0 → s2)
+             [s2 : (accept : #t)
+                 (0 → s2)
                  (1 → s2)]))
 
+;; note that all of these mutation methods can produce
+;; the same string multiple times
+
 (define (mutate-del word)
-  (in-generator
+  (generator ()
              (let loop ([lprime '()]
                         [ele (car word)]
                         [l (cdr word)])
                (if (empty? l)
-                   (begin
-                     (yield lprime)
-                     '())
+                   (begin (yield lprime) '())
                    (begin
                      (yield (append lprime l))
                      (loop (append lprime (list ele)) (car l) (cdr l)))))))
 
 (define (mutate-add word alphabet)
-  (in-generator
+  (generator ()
+             (begin
              (let loop ([lprime '()]
                         [l word])
                (if (empty? l)
@@ -59,10 +69,11 @@
                    (begin
                      (for ([a alphabet])
                        (yield (append lprime (list a) l)))
-                     (loop (append lprime (list (car l))) (cdr l)))))))
+                     (loop (append lprime (list (car l))) (cdr l))))))))
 
 (define (mutate-sub word alphabet)
-  (in-generator
+  (generator ()
+             (begin
              (let loop ([lprime '()]
                         [ele (car word)]
                         [l (cdr word)])
@@ -74,65 +85,62 @@
                    (begin
                      (for ([a alphabet] #:unless (eq? a ele))
                        (yield (append lprime (list a) l)))
-                     (loop (append lprime (list ele)) (car l) (cdr l)))))))
+                     (loop (append lprime (list ele)) (car l) (cdr l))))))))
 
-
-
-
+;; all deletions, all additions, all substitutions
 (define (mutate w alphabet)
   (generator ()
              (begin
-               (for ([wprime (mutate-del w)])
+               (unless (empty? w)
+               (for ([wprime (in-producer (mutate-del w) null)])
+                 (yield wprime)))
+               (for ([wprime (in-producer (mutate-add w alphabet) null)])
                  (yield wprime))
-               (for ([wprime (mutate-add w alphabet)])
-                 (yield wprime))
-               (for ([wprime (mutate-sub w alphabet)])
-                 (yield wprime))
+               (unless (empty? w)
+               (for ([wprime (in-producer (mutate-sub w alphabet) null)])
+                 (yield wprime)))
                null)))
 
-;; this code copied from bruteforcemethods for convenience
+; determine if adding 1, deleting 1, or mutating 1 produces the longest list
+; it's not ever going to be deleting 1, but ok
+(define (longest-mutation word alphabet)
+  (max (* (add1 (length word)) (length alphabet))
+       (length word)
+       (* (length word) (sub1 (length alphabet)))))
 
-(define (extend-word-by-one alphabet prevlist)
-  (let ([lists (for/list ([i alphabet])
-    (map (lambda (l) (cons i l)) prevlist))])
-    (append* lists)))
-
-(define (wordgenerator alphabet)
+;; interleave deletions/additions/substitutions
+(define (mutate2 w alphabet)
   (generator ()
-             (begin
-               (yield '())
-               (let loop ([workinglst (map (lambda (x) (list x)) alphabet)]
-                          [originallst (map (lambda (x) (list x)) alphabet)])
-                 (if (empty? workinglst)
-                     (loop (extend-word-by-one alphabet originallst) (extend-word-by-one alphabet originallst))
-                     (begin
-                       (yield (car workinglst))
-                       (loop (cdr workinglst) originallst)))))))
+             (let ([addgen (mutate-add w alphabet)]
+                   [delgen (if (empty? w) (infinite-generator (yield '()))
+                               (mutate-del w))]
+                   [subgen (if (empty? w) (infinite-generator (yield '()))
+                               (mutate-sub w alphabet))])
+               (begin
+               (for ([i  (in-range (longest-mutation w alphabet))])
+                 (let ([addword (addgen)]
+                       [delword (delgen)]
+                       [subword (subgen)])
+                   (unless (empty? addword) (yield addword))
+                   (unless (empty? delword) (yield delword))
+                   (unless (empty? subword) (yield subword))))
+               '()))))
 
-(define (words-up-to-k alphabet-length k)
-  (for/sum ([i (in-range (+ k 1))]) (expt alphabet-length i)))
+(define (exists-one-away wss T w)
+  (λ (S)
+    (for/first ([w (in-producer (mutate2 w (word-search-space-alphabet wss)) null)]
+                #:when (same-outcome? T S w))
+      (if w (word w) w))))
 
-(define (one-away M1 M2 w alphabet)
-  (let ([m (mutate w alphabet)])
-    (letrec ([f (lambda ()
-                  (let ([wprime (m)])
-                    (cond [(empty? wprime) null]
-                          [(same-outcome? M1 M2 wprime) (word wprime)]
-                          [(f)])))])
-      (f))))
-                        
-(define (exists-small-multiple M1 M2 alphabet k)
-  (let ([limit (words-up-to-k (length alphabet) k)]
-        [gen (wordgenerator alphabet)])
-    (letrec ([f (lambda (i)
-                  (let ([w (gen)])
-                    (cond [(eq? i limit) "no such word found"]
-                          [(not (same-outcome? M1 M2 w)) (let ([wprime (one-away M1 M2 w alphabet)])
-                                                           (if (empty? wprime) (f (add1 i)) (list (word w) wprime)))]
-                          [else (f (add1 i))])))])
-      (f 1))))
+(define (exists-small-multiple wss T)
+  (λ (S)
+    (for*/first ([w (in-producer (words (word-search-space-alphabet wss) (word-search-space-k wss)) null)]
+                [wprime (list ((exists-one-away wss T (word-value w)) S))]
+                #:when (and (not (same-outcome? S T (word-value w))) wprime))
+      (list w wprime))))
 
-(define r (exists-small-multiple S2 T2 (list 0 1) 4))
+(define x (exists-small-multiple (word-search-space (list 0 1) 5) T2))
+(define r (x S2))
 (define bad-val (word-value (car r)))
 (define good-val (word-value (cadr r)))
 
@@ -150,8 +158,8 @@
         (f word '() trace '()))
       null))
 
-(code-states S2 T2 (S2_trace bad-val '()) bad-val)
-(code-states S2 T2 (S2_trace good-val '()) good-val)
+;(code-states S2 T2 (S2_trace bad-val '()) bad-val)
+;(code-states S2 T2 (S2_trace good-val '()) good-val)
   
                
 
