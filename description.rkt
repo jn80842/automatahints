@@ -6,87 +6,83 @@
 (require "exampledfas.rkt")
 (require "bruteforcemethods.rkt")
 
-;; describe DFA (counterexamples as accepting words that all have more than k occurrences of '0'
-;; in other words, synthesize a description of the full counterexample language using a single predicate
+;; a language is defined by a filtering predicate over the set Sigma* (or a bounded Sigma^k).
+(struct language (alphabet predicate description))
 
-;; the language Sigma* where Sigma = {0, 1} and words are up to 8 symbols in length
-(define sigmastar (words (list 0 1) 8))
+;; a DFA is just another kind of predicate
+(define student-language (language (list 0 1) S2 "The language defined by the student solution DFA"))
+(define true-language (language (list 0 1) T2 "The language defined by the correct solution DFA"))
 
-;; we want to be able to compose languages. 
-(define (dfa-lang lang M)
+;; we can make a generator to emit all members of the language
+(define (language-generator lang)
   (generator ()
              (begin
-               (for ([w (in-producer lang)]
+               (for ([w (in-producer (words (language-alphabet lang) 8))]
                      #:break (empty? w)
-                     #:when (and (not (empty? w)) (M (word-value w))))
+                     #:when ((language-predicate lang) (word-value w)))
                  (yield w)))
              null))
 
-;; language of counterexamples for S2 and T2
-;; note this is NOT nice composition
-(define (ce-lang M1 M2)
-  (generator ()
-             (begin
-               (for ([w (in-producer (words (alphabet M1) 8))]
-                     #:break (empty? w)
-                     #:when (not (eq? (M1 (word-value w)) (M2 (word-value w)))))
-                 (yield w)))
-             null))
-
-;; predicate for greater-than number of occurrences
+;; we want to synthesize a language defined by a predicate like this one
+;; that's equivalent to the student solution (or equivalent to the counterexample language)
+;; in order to get a description like "All words with more than k occurrences of s
 (define (greater-than-k k symbol w)
   (< k (count (λ (s) (eq? symbol s)) w)))
-                 
-;; let's curry the predicate with the values we know will work
-;; we need our procedure to take 2 DFAs as args for now since we're recycling forall-words
-(define curried-greater-than
-  (λ (M1 M2 w)
-    (greater-than-k 2 0 w)))
 
-;; we can use the forall operator to check that our curried predicate is true
-;; we get back null, which means forall couldn't find a counterexample
-(define test-curried (forall-words-flat (ce-lang S2 T2) S2 T2 curried-greater-than))
+;; we can check two languages for equivalency
+(define (eq-lang? lang1 lang2)
+  (empty? (for/first ([w (in-producer lang1)]
+              [wprime (in-producer lang2)]
+              #:when (not (eq? w wprime)))
+    1)))
 
-;; let's search for k
-;; since sigmastar is limited to words of length 8 or less, k can't be greater than 8
-(define (k-search lang M1 M2)
-  (for/first ([k (in-range 1 9)]
-              #:when (empty? (forall-words-flat lang M1 M2
-                                                (λ (M1 M2 w) (greater-than-k k 0 w)))))
-    k))
+;; if we pick k=2, symbol=0, we can check if this predicate describes an equivalent language to S2
+(eq-lang? (language-generator student-language)
+          (language-generator (language (list 0 1) (λ (w) (greater-than-k 2 0 w)) "check")))
 
-(print "All counterexample words have ")
-(print (k-search (ce-lang S2 T2) S2 T2))
-(println " or more 0s.")
+;; thus we can check all values of k and symbols in sigma
+;; for many different predicates
+;; to synthesize a description
+(define descriptions (list (cons "Words with at least ~a occurrences of ~a" (λ (k s w) (<= k (count (λ(x) (eq? s x)) w))))
+                           (cons "Words with at most ~a occurrences of ~a" (λ (k s w) (>= k (count (λ(x) (eq? s x)) w))))
+                           (cons "Words with exactly ~a occurrences of ~a" (λ (k s w) (eq? k (count (λ(x) (eq? s x)) w))))))
 
-;; not a tight enough bound -- we want this predicate to be true for all counterexample
-;; and false for all correctly classified words
-(define (correct-lang M1 M2)
-  (generator ()
-             (begin
-               (for ([w (in-producer (words (alphabet M1) 8))]
-                     #:break (empty? w)
-                     #:when (eq? (M1 (word-value w)) (M2 (word-value w))))
-                 (yield w)))
-             null))
+;; we can also synthesize languages that are a subset of the target language
+(define (subset-lang? lang1 lang2 alphabet)
+  (letrec ([f (λ (w wprime)
+                (cond [(empty? w) #t]
+                      [(empty? wprime) #f]
+                      [(equal-word? (word-value w) (word-value wprime)) (f (lang1) (lang2))]
+                      [(greater-word? (word-value w) (word-value wprime) alphabet) (f w (lang2))]
+                      [(lesser-word? (word-value w) (word-value wprime) alphabet) #f]))])
+    (f (lang1) (lang2))))
 
-(define (better-k-search lang lang2 M1 M2)
-  (for/first ([k (in-range 1 9)]
-              #:when (and (empty? (forall-words-flat lang M1 M2
-                                                (λ (M1 M2 w) (greater-than-k k 0 w))))
-                          (empty? (forall-words-flat lang2 M1 M2
-                                                          (λ (M1 M2 w) (not (greater-than-k k 0 w)))))))
-    k))
 
-(println (better-k-search (ce-lang S2 T2) (correct-lang S2 T2) S2 T2))
+;;;;;;;;;;;;;;;;;;;
+;;;;; helpers ;;;;;
+;;;;;;;;;;;;;;;;;;;
 
-;; search for k and symbol
-(define (k-and-symbol-search lang lang2 M1 M2)
-  (for*/first ([x (alphabet M1)]
-              [k (in-range 1 9)]
-              #:when (and (empty? (forall-words-flat lang M1 M2
-                                                     (λ (M1 M2 w) (greater-than-k k x w))))
-                          (empty? (forall-words-flat lang2 M1 M2
-                                                     (λ (M1 M2 w) (not (greater-than-k k x w)))))))
-    (cons k x)))
+;; null words aren't equal to anything
+(define (equal-word? w wprime)
+  (and (not (empty? w))
+       (and (not (empty? wprime))
+            (and (eq? (length w) (length wprime))
+                 (andmap eq? w wprime)))))
+
+;; assume all alphabets are integers for now; can map symbols to ints later
+(define (word->decimal word alphabet)
+  (let ([base (length alphabet)])
+    (foldl (λ (digit place sum) (+ sum (* digit (expt base place)))) 0 word (reverse (range 0 (length word))))))
+      
+(define (word->ordinal word alphabet)
+  (let* ([base (length alphabet)]
+        [prior (foldl + 0 (map (λ (x) (expt base x)) (range 0 (length word))))]
+        [current (word->decimal word alphabet)])
+    (+ prior current)))
+
+(define (greater-word? w wprime alphabet)
+  (> (word->ordinal w alphabet) (word->ordinal wprime alphabet)))
+(define (lesser-word? w wprime alphabet)
+  (< (word->ordinal w alphabet) (word->ordinal wprime alphabet)))
+
 
