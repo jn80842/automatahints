@@ -5,7 +5,7 @@
 (provide (struct-out word-search-space)
          (struct-out word)
          (struct-out fsm)
-         automaton automaton2 automaton3
+         automaton automaton2 
          symbolic-word symbolic-word*
          same-outcome? counterexample-pred bad-prefix-pred split-state-pred
          alphabet states bounded-word-length timeout-hint hint)
@@ -47,32 +47,41 @@
         (state : name (label → target) ... ) ...)
      (letrec ([state
                (λ (stream)
-       (let ([trace '()])
-       (cond
-         [(empty? stream) name]
-         [else
-          (case (first stream)
-            [(label) (target (rest stream))] ...
-            [else false])])))]
+                 (cond
+                   [(empty? stream) name]
+                   [else
+                    (case (first stream)
+                      [(label) (target (rest stream))] ...
+                      [else false])]))]
               ...)
-             (fsm '((state (label target) ... ) ...) init-state))]))
+       (fsm '((state (label target) ... ) ...) init-state))]))
 
-(define-syntax automaton3
-  (syntax-rules (: →)
-    [(_ init-state
-        (state : name (label → target) ...)
-        ...)
-     (letrec ([state
-               (λ (stream trace)
-      ; (let ([trace '()])
-       (cond
-         [(empty? stream) (append trace (list name))]
-         [else
-          (case (first stream)
-            [(label) (target (rest stream) (append trace (list name)))] ...
-            [else false])]))]
-              ...)
-              (fsm '((state (label target) ... ) ... ) init-state))]))
+;(define-syntax automaton3
+;  (syntax-rules (:)
+;    [(_ init-state
+;        (state : name (label → target) ...) ...)
+;     (letrec ([state
+;               (λ (stream trace)
+;     (let ([trace '()])
+;       (cond
+;         [(empty? stream) (append trace (list name))]
+;         [else
+;          (case (first stream)
+;            [(label) (target (rest stream) (append trace (list name)))] ...
+;            [else false])])))]
+;              ...)
+;              (fsm '((state (label target) ... ) ... ) init-state))]))
+
+;(define S2_trace
+;  (automaton3 s0
+;             [s0 : "s0" (0 → s1)
+;                 (1 → s0)]
+;            [s1 : "s1" (0 → s2)
+;                 (1 → s1)]
+;             [s2 : "s2" (0 → s3)
+;                 (1 → s2)]
+;             [s3 : "s3" (0 → s3)
+;                 (1 → s3)]))
 
 (define (alphabet m)
   (remove-duplicates 

@@ -33,3 +33,5 @@
 
 (prefix-hint S2)
 
+(define (count-symbol
+

@@ -22,4 +22,35 @@
                                            counterexample-language (intersection student-language correct-language)))
 
 
+;; attributes of languages
+(non-empty? L1)
+(finite? L1)
+(infinite? L1)
+(subset? L1 L2)
+
+;; description predicate that should be true for every word in the language
+;; predicates map to English description
+(λ (w) (prefix? ?? w))
+(λ (w) (substring? ?? w))
+(λ (w) (eq? ?? (length w)))
+(λ (w) (even? (length w)))
+(λ (w) (odd? (length w)))
+(λ (w) (<= ?? (count-symbol ?? w)))
+
+
+(define prefix-lang (subset? (language alphabet (λ (w) (prefix-append wprime w))) counterexample-language))
+(equal? prefix-lang (language alphabet (λ (w) (<= ?? (count-symbol ?? w)))))
+
+
+;; from mtg -- synthesize subset of lang that contains some substring
+(define LL (map (λ (s) (language alphabet (λ (w) (substring? s w)))) (list ?? ?? ??)))
+
+(define lang-constraints (and (subset? L1 counterexample-language)
+                              (infinite? L1)
+                              (forall-words (λ (w) (substring? ?? w)) L1)
+                              (empty? (intersection L1 correct-language))))
+
+
+
+
 

@@ -4,7 +4,7 @@
 (require "automata.rkt")
 
 (provide wordgenerator words
-         exists-word forall-words
+         exists-word forall-words forall-words-flat
          exists-word-forall-words exists-word-exists-word)
 
 (define (extend-word-by-one alphabet prevlist)
@@ -64,6 +64,12 @@
   (for/first ([wprime (in-producer gen)]
               #:when (or (empty? wprime) (not (predicate S T (word-value w) (word-value wprime)))))
        (empty? wprime)))
+
+;; returns either word that makes predicate false, or null (which means predicate is always true)
+(define (forall-words-flat gen S T predicate)
+  (for/first ([w (in-producer gen )]
+              #:when (or (empty? w) (not (predicate S T (word-value w)))))
+    w))
 
 (define (exists-word-forall-words wss T predicate)
   (λ (S)
