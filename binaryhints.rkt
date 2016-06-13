@@ -10,7 +10,7 @@
                   string?))
 
 (require "automata.rkt")
-(require "rosettehintmethods.rkt")
+;(require "rosettehintmethods.rkt")
 (require "bruteforcemethods.rkt")
 
 (define-lift string->number [(string?) racket/string->number])
@@ -201,13 +201,13 @@
 ;;;; counterexample on 2-col greater than ;;;;
 
 (printf "Counterexample hint:\n")
-(time (define greater-ce (solve-automaton-ce S134 T134 sigma2 4))
-      (define sol134 (evaluate greater-ce))
-(printf "The word ~a is a counterexample for automaton S134 (found via Rosette).\n" sol134))
-(time (printf "The word ~a is a counterexample for automaton S134 (found via enumerative search).\n" (find-counterexample S134 T134 sigma2 4)))
+(define ce (exists-word S134 T134 sigma2 4 counterexample-pred))
+(if (empty? ce)
+    (printf "No counterexample of size ~a of less was found.\n\n" 3)
+    (printf "The word ~a is a counterexample.\n\n" (word-value ce)))
 
 (define (solve-check-pred m1 alphabet k predicate)
-  (define w (word* k alphabet))
+  (define w (symbolic-word* k alphabet))
   (evaluate w (solve (assert (not (eq? (m1 w) (predicate (foldl sigma-n->decimal (list 0 0) w))))))))
 (time 
 (define greater-pred-ce (solve-check-pred S134 sigma2 3 greater-eq-pred))
@@ -224,7 +224,7 @@
   (append p w))
 (define (prefix-check m1 m2 prefixer w)
   (assert (not (same-outcome? m1 m2 (prefixer w)))))
-(define wprime (word* 3 sigma2))
+(define wprime (symbolic-word* 3 sigma2))
 (define binding
   (synthesize #:forall (list wprime)
               #:guarantee (prefix-check S134 T134 prefixer wprime)))
@@ -235,7 +235,7 @@
 ;;;; split state on 2nd row = 1st row * 3 ;;;;
 (printf "Split state hint:\n")
 
-(time (printf "Words that arrive in state ~a have different behaviors on the true solution (found via Rosette).\n" (solve-split-state S133 T133 sigma2 4)))
-(time (printf "Words that arrive in state ~a have different behaviors on the true solution (found via enumerative search).\n" (car (find-split-state S133 T133 sigma2 4))))
+;(time (printf "Words that arrive in state ~a have different behaviors on the true solution (found via Rosette).\n" (solve-split-state S133 T133 sigma2 4)))
+;(time (printf "Words that arrive in state ~a have different behaviors on the true solution (found via enumerative search).\n" (car (find-split-state S133 T133 sigma2 4))))
 
 
