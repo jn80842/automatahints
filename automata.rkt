@@ -5,6 +5,9 @@
 
 (provide (struct-out word-search-space)
          (struct-out word)
+         (struct-out language)
+         language-generator
+         dfa-lang
          (struct-out fsm)
          words
          automaton automaton2 
@@ -149,6 +152,22 @@
 
 (define (words-up-to-k alphabet-length k)
   (for/sum ([i (in-range (+ k 1))]) (expt alphabet-length i)))
+
+
+;;;;; languages ;;;;;;;;
+(struct language (alphabet predicate description))
+
+(define (language-generator lang)
+  (generator ()
+             (begin
+               (for ([w (in-producer (words (language-alphabet lang) 8))]
+                     #:break (empty? w)
+                     #:when ((language-predicate lang) w))
+                 (yield w)))
+             null))
+
+(define (dfa-lang dfa description)
+                  (language (alphabet dfa) (λ (w) (and (not (empty? w)) (dfa (word-value w)))) description))
 
 ;; helper function: w is accepted on m1 and rejected on m2 or vice versa.
 (define (same-outcome? m1 m2 w)

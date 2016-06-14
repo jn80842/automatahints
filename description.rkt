@@ -4,71 +4,17 @@
 
 (require "automata.rkt")
 (require "exampledfas.rkt")
-(require "bruteforcemethods.rkt")
 (require "descriptionhelpers.rkt")
+(require "languageoperators.rkt")
+(require "predicatelanguage.rkt")
 
-(provide (struct-out language) dfa-lang
-         language-generator union-lang intersect-lang set-diff-lang set-complement-lang
-         eq-lang? subset-lang? empty-lang? word-in-lang?)
-
-;; a language is defined by a filtering predicate over the set Sigma* (or a bounded Sigma^k).
-;; predicates take one value, a word object
-(struct language (alphabet predicate description))
-
-;; a DFA is just another kind of predicate
-(define student-language (language (list 0 1) (λ (w) (S2 (word-value w))) "The language defined by the student solution DFA"))
-(define true-language (language (list 0 1) (λ (w) (T2 (word-value w))) "The language defined by the correct solution DFA"))
-
-;; convenience method
-(define (dfa-lang dfa)
-                  (language (alphabet dfa) (λ (w) (and (not (empty? w)) (dfa (word-value w)))) (fsm-graph dfa)))
-
-;; we can make a generator to emit all members of the language
-(define (language-generator lang)
-  (generator ()
-             (begin
-               (for ([w (in-producer (words (language-alphabet lang) 8))]
-                     #:break (empty? w)
-                     #:when ((language-predicate lang) w))
-                 (yield w)))
-             null))
-
-;; we can compose languages with set operators
-;; assume they share an alphabet
-(define (union-lang lang1 lang2)
-  (language (language-alphabet lang1) (λ (w) (or ((language-predicate lang1) w) ((language-predicate lang2) w)))
-            (string-append "union " (language-description lang1) " and " (language-description lang2))))
-(define (intersect-lang lang1 lang2)
-  (language (language-alphabet lang1) (λ (w) (and ((language-predicate lang1) w) ((language-predicate lang2) w)))
-            (string-append "intersect " (language-description lang1) " and " (language-description lang2))))
-(define (set-diff-lang lang1 lang2)
-  (language (language-alphabet lang1) (λ (w) (and ((language-predicate lang1) w) (not ((language-predicate lang2) w))))
-            (string-append "set diff " (language-description lang1) " and " (language-description lang2))))
-(define (set-complement-lang lang)
-  (language (language-alphabet lang) (λ (w) (not ((language-predicate lang) w))) (string-append "complement " (language-description lang))))
-;; also compose with regular language closure properties
-(define (concat-lang lang1 lang2)
-  (language (language-alphabet lang1) (λ (w) (ormap (λ (i) ((and ((language-predicate lang1) (word (take (word-value w) i)))
-                                                                 ((language-predicate lang2) (word (drop (word-value w) i))))))
-                                                    (range 0 (length (word-value w))))) (string-append "concat " (language-description lang1)
-                                                                                                       " and " (language-description lang2))))
-
-(define (empty-lang? lang)
-  (let ([lg (language-generator lang)])
-    (eq? '() (lg))))
+;; running examples
+(define student-language (dfa-lang S3 "prefix 01"))
+(define true-language (dfa-lang T3 "substring 01"))
 
 ;; compose two DFA-based languages to get a language of counterexamples
 (define counterexample-lang (union-lang (set-diff-lang student-language true-language) (set-diff-lang true-language student-language)))
 
-;; we can check two languages for equivalency
-;; assumption that languages are ordered in the same way
-;; note: this will be wrong if lang1 and lang2 are equivalent but of different length
-(define (eq-lang? lang1 lang2)
-  (not (for/first ([w (in-producer (language-generator lang1))]
-              [wprime (in-producer (language-generator lang2))]
-              #:break (and (empty? w) (empty? wprime))
-              #:when (not (equal-word? w wprime)))
-    #t)))
 
 ;; if we pick k=2, symbol=0, we can check if this predicate describes an equivalent language to S2
 (eq-lang? student-language (language (language-alphabet student-language)
@@ -108,27 +54,9 @@
                            (cons "Words with exactly ~a occurrences of '~a'"
                                  exactly-k)))
 ;;; these should be packaged as language structs
-(define at-least-k-s (λ (k s) (language (list 0 1) (curry greater-eq-k k s) "Words with at least ~a occurrences of ~a")))
-(define at-most-k-s (λ (k s) (language (list 0 1) (curry less-eq-k k s) "Words with at most ~a occurrences of ~a")))
-(define exactly-k-s (λ (k s) (language (list 0 1) (curry exactly-k k s) "Words with exactly ~a occurrences of ~a")))
 
-;; we can also synthesize languages that are a subset of the target language
-(define (word-in-lang? w lang)
-  ((language-predicate lang) w))
 
-(define (subset-lang? lang1 lang2)
-  (let ([r (for/first ([w (in-producer (language-generator lang1))]
-                       #:break (empty? w)
-                       #:when (not (word-in-lang? w lang2)))
-             w)])
-    (not (word? r))))
 
-(define (disjoint-lang? lang1 lang2)
-  (let* ([allwords (language (language-alphabet lang1) (λ(w) #t) "all words")]
-         [r (for/first ([w (in-producer (language-generator allwords))]
-                #:break (empty? w)
-                #:when (and (word-in-lang? w lang1) (word-in-lang? w lang2))) w)])
-    (not (word? r))))
 
 (define (synthesize-descriptions lang descriptions max-k)
   (for*/first ([d descriptions]
