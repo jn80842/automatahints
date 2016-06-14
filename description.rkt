@@ -108,6 +108,9 @@
                            (cons "Words with exactly ~a occurrences of '~a'"
                                  exactly-k)))
 ;;; these should be packaged as language structs
+(define at-least-k-s (λ (k s) (language (list 0 1) (curry greater-eq-k k s) "Words with at least ~a occurrences of ~a")))
+(define at-most-k-s (λ (k s) (language (list 0 1) (curry less-eq-k k s) "Words with at most ~a occurrences of ~a")))
+(define exactly-k-s (λ (k s) (language (list 0 1) (curry exactly-k k s) "Words with exactly ~a occurrences of ~a")))
 
 ;; we can also synthesize languages that are a subset of the target language
 (define (word-in-lang? w lang)
@@ -118,6 +121,13 @@
                        #:break (empty? w)
                        #:when (not (word-in-lang? w lang2)))
              w)])
+    (not (word? r))))
+
+(define (disjoint-lang? lang1 lang2)
+  (let* ([allwords (language (language-alphabet lang1) (λ(w) #t) "all words")]
+         [r (for/first ([w (in-producer (language-generator allwords))]
+                #:break (empty? w)
+                #:when (and (word-in-lang? w lang1) (word-in-lang? w lang2))) w)])
     (not (word? r))))
 
 (define (synthesize-descriptions lang descriptions max-k)
@@ -133,5 +143,9 @@
 ;;; really filter over set of possible languages (symbolic language)
 ;;; looking for eq/subset/superset/etc to our specified lang
 
-
+(define only-ones (language (list 0 1) (λ (w) (and (not (empty? w)) (not (empty? (word-value w)))
+                                                   (andmap (λ (s) (eq? s 1)) (word-value w)))) "only ones"))
+  
+(define only-zeroes (language (list 0 1) (λ (w) (and (not (empty? w)) (not (empty? (word-value w)))
+                                                     (andmap (λ (s) (eq? s 0)) (word-value w)))) "only zeroes"))
 

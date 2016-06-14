@@ -1,10 +1,12 @@
 #lang s-exp rosette
 
 (require racket/engine)
+(require racket/generator)
 
 (provide (struct-out word-search-space)
          (struct-out word)
          (struct-out fsm)
+         words
          automaton automaton2 
          symbolic-word symbolic-word*
          same-outcome? counterexample-pred bad-prefix-pred split-state-pred
@@ -122,6 +124,31 @@
 (define (symbolic-word* k alphabet)
   (define-symbolic* n number?)
   (take (symbolic-word k alphabet) n))
+
+(define (extend-word-by-one alphabet prevlist)
+  (let ([lists (for/list ([i alphabet])
+    (map (lambda (l) (cons i l)) prevlist))])
+    (append* lists)))
+
+;; word generator
+(define (words alphabet [k 100])
+  (generator ()
+             (begin
+               (yield (word '()))
+               (let loop ([workinglst (map (lambda (x) (list x)) alphabet)]
+                          [originallst (map (lambda (x) (list x)) alphabet)]
+                          [limit (words-up-to-k (length alphabet) k)]
+                          [i 0])
+                 (if (eq? limit i)
+                     null
+                     (if (empty? workinglst)
+                         (loop (extend-word-by-one alphabet originallst) (extend-word-by-one alphabet originallst) limit (add1 i))
+                         (begin
+                           (yield (word (car workinglst)))
+                           (loop (cdr workinglst) originallst limit (add1 i)))))))))
+
+(define (words-up-to-k alphabet-length k)
+  (for/sum ([i (in-range (+ k 1))]) (expt alphabet-length i)))
 
 ;; helper function: w is accepted on m1 and rejected on m2 or vice versa.
 (define (same-outcome? m1 m2 w)
